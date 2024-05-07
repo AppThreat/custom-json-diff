@@ -1,0 +1,45 @@
+[project]
+name = "custom-json-diff"
+version = "0.1.0"
+description = "Custom JSON diff tool"
+authors = [
+  { name = "Caroline Russell", email = "caroline@appthreat.dev" },
+]
+dependencies = ["json-flatten>=0.3"]
+license = { text = "Apache-2.0" }
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Apache Software License",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Topic :: Utilities",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/appthreat/custom-json-diff"
+"Bug Tracker" = "https://github.com/appthreat/atom-tools/custom-json-diff/issues"
+
+[project.scripts]
+cjd = "custom_json_diff.custom_json_diff:main"
+custom-json-diff = "custom_json_diff.custom_json_diff:main"
+
+[project.optional-dependencies]
+dev = [
+"pytest",
+]
+
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+  "custom_json_diff",
+]
+
+
