@@ -5,12 +5,12 @@ from custom_json_diff.custom_json_diff import load_json, output_results, sort_di
 
 @pytest.fixture
 def data():
-    return load_json("sbom-java.json", ["serialNumber", "metadata.timestamp"], False, False)
+    return load_json("test/sbom-java.json", ["serialNumber", "metadata.timestamp"], False, False)
 
 
 @pytest.fixture
 def data_2():
-    return load_json("sbom-java.json", ["serialNumber", "metadata.timestamp"], False, True)
+    return load_json("test/sbom-java.json", ["serialNumber", "metadata.timestamp"], False, True)
 
 
 def test_load_json(data):
