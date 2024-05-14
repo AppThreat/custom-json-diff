@@ -3,7 +3,7 @@ import json
 import logging
 import re
 import sys
-from typing import Dict, List
+from typing import Dict, List, Set
 
 import json_flatten
 
@@ -53,20 +53,17 @@ def build_args():
     return parser.parse_args()
 
 
-def check_key(key: str, exclude_keys: List[str]) -> bool:
-    for k in exclude_keys:
-        if key.startswith(k):
-            return False
-    return True
+def check_key(key: str, exclude_keys: Set[str]) -> bool:
+    return not any(key.startswith(k) for k in exclude_keys)
 
 
-def compare_dicts(json1: str, json2: str, skip_filepaths: bool, exclude_keys: List[str], regex: bool):
+def compare_dicts(json1: str, json2: str, skip_filepaths: bool, exclude_keys: Set[str], regex: bool):
     json_1_data = sort_dict(load_json(json1, exclude_keys, regex, skip_filepaths))
     json_2_data = sort_dict(load_json(json2, exclude_keys, regex, skip_filepaths))
-    output_results(json_1_data, json_2_data)
+    return output_results(json_1_data, json_2_data)
 
 
-def filter_dict(data: Dict, exclude_keys: List[str], regex: bool, skip_filepaths: bool) -> Dict:
+def filter_dict(data: Dict, exclude_keys: Set[str], regex: bool, skip_filepaths: bool) -> Dict:
     flattened = json_flatten.flatten(data)
     if regex:
         filtered = filter_regex(flattened, exclude_keys)
@@ -77,7 +74,7 @@ def filter_dict(data: Dict, exclude_keys: List[str], regex: bool, skip_filepaths
     return json_flatten.unflatten(filtered)
 
 
-def filter_simple(flattened_data: Dict, exclude_keys: List[str]) -> Dict:
+def filter_simple(flattened_data: Dict, exclude_keys: Set[str]) -> Dict:
     filtered = {}
     for key, value in flattened_data.items():
         if check_key(key, exclude_keys):
@@ -85,7 +82,7 @@ def filter_simple(flattened_data: Dict, exclude_keys: List[str]) -> Dict:
     return filtered
 
 
-def filter_regex(flattened_data: Dict, exclude_keys: List[str]) -> Dict:
+def filter_regex(flattened_data: Dict, exclude_keys: Set[str]) -> Dict:
     exclude_keys = [re.compile(x) for x in exclude_keys]
     filtered = {}
     for key, value in flattened_data.items():
@@ -102,7 +99,7 @@ def get_sort_field(data: Dict) -> str:
     raise ValueError("No sort field found")
 
 
-def load_json(json_file: str, exclude_keys: List[str], regex: bool, skip_filepaths: bool):
+def load_json(json_file: str, exclude_keys: Set[str], regex: bool, skip_filepaths: bool):
     try:
         with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -117,10 +114,9 @@ def load_json(json_file: str, exclude_keys: List[str], regex: bool, skip_filepat
 
 def output_results(json_1_data: Dict, json_2_data: Dict):
     if json_1_data == json_2_data:
-        print("JSON files are equal")
+        return "JSON files are equal"
     else:
-        print("JSON files are not equal")
-        sys.exit(1)
+        return "JSON files are not equal"
 
 
 def remove_filepaths(data: Dict) -> Dict:
