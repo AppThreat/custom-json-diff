@@ -5,7 +5,7 @@ description = "Custom JSON diff tool"
 authors = [
   { name = "Caroline Russell", email = "caroline@appthreat.dev" },
 ]
-dependencies = ["json-flatten>=0.3"]
+dependencies = ["json-flatten>=0.3", "toml>=0.10"]
 license = { text = "Apache-2.0" }
 readme = "README.md"
 requires-python = ">=3.10"

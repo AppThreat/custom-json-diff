@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from custom_json_diff.custom_diff import set_excluded_fields, compare_dicts, get_diffs
+from custom_json_diff.custom_diff import import_toml, set_excluded_fields, compare_dicts, get_diffs
 
 
 def build_args():
@@ -10,23 +10,23 @@ def build_args():
         "-i",
         "--input",
         action="store",
-        help="Two input files to compare",
+        help="Two JSON files to compare",
         required=True,
         nargs=2,
         dest="input",
     )
-    parser.add_argument(
-        "-r",
-        "--regex",
-        action="store_true",
-        help="Excluded keys are regular expressions.",
-    )
     arg_group = parser.add_mutually_exclusive_group(required=True)
+    arg_group.add_argument(
+        "-c",
+        "--config-file",
+        action="store",
+        help="Import TOML configuration file",
+    )
     arg_group.add_argument(
         "-x",
         "--exclude",
         action="store",
-        help="exclude field(s) from comparison",
+        help="Exclude field(s) from comparison",
         default=[],
         dest="exclude",
         nargs="+",
@@ -43,7 +43,7 @@ def build_args():
         "-p",
         "--preset",
         action="store",
-        help="preset to use",
+        help="Preset to use",
         choices=["cdxgen"],
         dest="preset",
     )
@@ -53,16 +53,18 @@ def build_args():
 def main():
     args = build_args()
     if args.preset:
-        exclude_keys = set_excluded_fields(args.preset)
+        exclude_keys, sort_keys = set_excluded_fields(args.preset)
+    elif args.config_file:
+        exclude_keys, sort_keys = import_toml(args.config_file)
     else:
         exclude_keys = set(args.exclude)
-    result, j1, j2 = compare_dicts(args.input[0], args.input[1], exclude_keys, args.regex)
+        sort_keys = []
+    result, j1, j2 = compare_dicts(args.input[0], args.input[1], exclude_keys, sort_keys)
     if result == 0:
         print("Files are identical")
     else:
         diffs = get_diffs(args.input[0], args.input[1], j1, j2)
         print(json.dumps(diffs, indent=2))
-
 
 
 if __name__ == "__main__":
