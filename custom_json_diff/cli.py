@@ -21,6 +21,14 @@ def build_args():
         "--config-file",
         action="store",
         help="Import TOML configuration file",
+        dest="config"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        action="store",
+        help="Export JSON of differences to this file",
+        dest="output",
     )
     arg_group.add_argument(
         "-x",
@@ -54,8 +62,8 @@ def main():
     args = build_args()
     if args.preset:
         exclude_keys, sort_keys = set_excluded_fields(args.preset)
-    elif args.config_file:
-        exclude_keys, sort_keys = import_toml(args.config_file)
+    elif args.config:
+        exclude_keys, sort_keys = import_toml(args.config)
     else:
         exclude_keys = set(args.exclude)
         sort_keys = []
@@ -64,7 +72,10 @@ def main():
         print("Files are identical")
     else:
         diffs = get_diffs(args.input[0], args.input[1], j1, j2)
-        print(json.dumps(diffs, indent=2))
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(diffs)
+        print(diffs)
 
 
 if __name__ == "__main__":
