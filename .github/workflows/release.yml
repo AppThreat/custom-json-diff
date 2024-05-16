@@ -2,8 +2,6 @@ name: Publish to PyPI
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 
@@ -11,6 +9,8 @@ jobs:
   pypi:
     runs-on: ubuntu-latest
     permissions:
+      contents: write
+      packages: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
