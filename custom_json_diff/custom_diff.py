@@ -57,12 +57,12 @@ def filter_simple(flattened_data: Dict, exclude_keys: Set[str]) -> Dict:
     }
 
 
-def get_diffs(file_1: str, file_2: str, json_1_data: Dict, json_2_data: Dict) -> Dict:
+def get_diffs(file_1: str, file_2: str, json_1_data: Dict, json_2_data: Dict) -> str:
     j1 = {f"{key}:{value}" for key, value in json_1_data.items()}
     j2 = {f"{key}:{value}" for key, value in json_2_data.items()}
     result = unflatten({value.split(":")[0]: value.split(":")[1] for value in (j1 - j2)})
     result2 = unflatten({value.split(":")[0]: value.split(":")[1] for value in (j2 - j1)})
-    return {file_1: result, file_2: result2}
+    return json.dumps({file_1: result, file_2: result2}, indent=2)
 
 
 def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
