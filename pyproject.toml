@@ -1,6 +1,6 @@
 [project]
 name = "custom-json-diff"
-version = "0.1.0"
+version = "0.1.1"
 description = "Custom JSON diff tool"
 authors = [
   { name = "Caroline Russell", email = "caroline@appthreat.dev" },

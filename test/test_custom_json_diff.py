@@ -15,13 +15,13 @@ def data_2():
 
 @pytest.fixture
 def data_3():
-    return load_json("test/sbom-java.json", {"serialNumber", "metadata.timestamp", r"components.[].author"}, ["url", "content", "ref", "name", "value"])
+    return load_json("test/sbom-java.json", {"serialNumber", "metadata.timestamp", "metadata.tools.components.[].version"}, ["url", "content", "ref", "name", "value"])
 
 
 def test_load_json(data, data_3):
     assert "serialNumber" not in data
     assert "metadata.timestamp" not in data
-    assert "components.[0].author" not in data_3
+    assert "metadata.tools.components.[].version" not in data_3
 
 
 def test_sort_dict(data, data_2, data_3):
@@ -3061,4 +3061,3 @@ def test_sort_dict(data, data_2, data_3):
  'specVersion': '1.5',
  'version': 1
                                  }
-
