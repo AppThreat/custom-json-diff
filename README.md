@@ -12,16 +12,16 @@ ignore in the comparison and sorts all fields.
 
 ## CLI Usage
 ```
-usage: cjd [-h] -i INPUT INPUT [-c CONFIG] [-o OUTPUT] [-x EXCLUDE [EXCLUDE ...]] [-p {cdxgen}]
+usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] (-c CONFIG | -x EXCLUDE [EXCLUDE ...] | -p {cdxgen})
 
 options:
   -h, --help            show this help message and exit
   -i INPUT INPUT, --input INPUT INPUT
                         Two JSON files to compare
-  -c CONFIG, --config-file CONFIG
-                        Import TOML configuration file
   -o OUTPUT, --output OUTPUT
                         Export JSON of differences to this file
+  -c CONFIG, --config-file CONFIG
+                        Import TOML configuration file
   -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
                         Exclude field(s) from comparison
   -p {cdxgen}, --preset {cdxgen}
