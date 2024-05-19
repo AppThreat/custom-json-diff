@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import sys
+from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 import toml
@@ -16,13 +17,27 @@ def check_regex(regex_keys: List[re.Pattern], key: str) -> bool:
     return any(regex.match(key) for regex in regex_keys)
 
 
-def compare_dicts(json1: str, json2: str, exclude_keys: Set[str], sort_keys: List[str]):
+def compare_dicts(
+        json1: str | Path, json2: str | Path, preset: str | None = None,
+        excluded: List[str] | None = None, config: str | None = None
+) -> Tuple[int, Dict[str, str], Dict[str, str]]:
+    if preset:
+        exclude_keys, sort_keys = set_excluded_fields(preset)
+    elif config:
+        exclude_keys, sort_keys = import_toml(config)
+    else:
+        exclude_keys, sort_keys = set(excluded), []
     json_1_data = load_json(json1, exclude_keys, sort_keys)
     json_2_data = load_json(json2, exclude_keys, sort_keys)
     if json_1_data == json_2_data:
         return 0, json_1_data, json_2_data
     else:
         return 1, json_1_data, json_2_data
+
+
+def export_results(outfile, diffs):
+    with open(outfile, "w", encoding="utf-8") as f:
+        f.write(json.dumps(diffs, indent=2))
 
 
 def filter_advanced(flattened_data: Dict, exclude_keys: Set[str]) -> Dict:
@@ -57,12 +72,12 @@ def filter_simple(flattened_data: Dict, exclude_keys: Set[str]) -> Dict:
     }
 
 
-def get_diffs(file_1: str, file_2: str, json_1_data: Dict, json_2_data: Dict) -> str:
+def get_diffs(file_1: str | Path, file_2: str | Path, json_1_data: Dict, json_2_data: Dict) -> Dict:
     j1 = {f"{key}:{value}" for key, value in json_1_data.items()}
     j2 = {f"{key}:{value}" for key, value in json_2_data.items()}
     result = unflatten({value.split(":")[0]: value.split(":")[1] for value in (j1 - j2)})
     result2 = unflatten({value.split(":")[0]: value.split(":")[1] for value in (j2 - j1)})
-    return json.dumps({file_1: result, file_2: result2}, indent=2)
+    return {str(file_1): result, str(file_2): result2}
 
 
 def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
@@ -113,7 +128,10 @@ def set_excluded_fields(preset: str) -> Tuple[Set[str], List[str]]:
     excluded = []
     sort_fields = []
     if preset == "cdxgen":
-        excluded.extend(["metadata.timestamp", "serialNumber"])
+        excluded.extend(["metadata.timestamp", "serialNumber",
+                         "metadata.tools.components.[].version",
+                         "metadata.tools.components.[].purl",
+                         "metadata.tools.components.[].bom-ref"])
         sort_fields.extend(["url", "content", "ref", "name", "value"])
     return set(excluded), sort_fields
 
@@ -142,3 +160,4 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     if isinstance(lst[0], (str, int)):
         lst.sort()
     return lst
+

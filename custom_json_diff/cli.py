@@ -1,7 +1,9 @@
 import argparse
 import json
 
-from custom_json_diff.custom_diff import import_toml, set_excluded_fields, compare_dicts, get_diffs
+from custom_json_diff.custom_diff import (
+    export_results, compare_dicts, get_diffs
+)
 
 
 def build_args():
@@ -15,6 +17,13 @@ def build_args():
         nargs=2,
         dest="input",
     )
+    parser.add_argument(
+        "-o",
+        "--output",
+        action="store",
+        help="Export JSON of differences to this file",
+        dest="output",
+    )
     arg_group = parser.add_mutually_exclusive_group(required=True)
     arg_group.add_argument(
         "-c",
@@ -22,13 +31,6 @@ def build_args():
         action="store",
         help="Import TOML configuration file",
         dest="config"
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        action="store",
-        help="Export JSON of differences to this file",
-        dest="output",
     )
     arg_group.add_argument(
         "-x",
@@ -39,14 +41,6 @@ def build_args():
         dest="exclude",
         nargs="+",
     )
-    # parser.add_argument(
-    #     "-s",
-    #     "--skip-filepaths",
-    #     action="store_true",
-    #     help="skip filepaths in comparison",
-    #     default=False,
-    #     dest="skip_filepaths",
-    #     )
     arg_group.add_argument(
         "-p",
         "--preset",
@@ -60,22 +54,14 @@ def build_args():
 
 def main():
     args = build_args()
-    if args.preset:
-        exclude_keys, sort_keys = set_excluded_fields(args.preset)
-    elif args.config:
-        exclude_keys, sort_keys = import_toml(args.config)
-    else:
-        exclude_keys = set(args.exclude)
-        sort_keys = []
-    result, j1, j2 = compare_dicts(args.input[0], args.input[1], exclude_keys, sort_keys)
+    result, j1, j2 = compare_dicts(args.input[0], args.input[1], args.preset, args.exclude, args.config)
     if result == 0:
-        print("Files are identical")
+        print("Files are identical.")
     else:
         diffs = get_diffs(args.input[0], args.input[1], j1, j2)
         if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                f.write(diffs)
-        print(diffs)
+            export_results(args.output, diffs)
+        print(json.dumps(diffs, indent=2))
 
 
 if __name__ == "__main__":
