@@ -9,6 +9,9 @@ import toml
 from json_flatten import flatten, unflatten
 
 
+DELIM = "|>"
+
+
 def check_key(key: str, exclude_keys: Set[str]) -> bool:
     return not any(key.startswith(k) for k in exclude_keys)
 
@@ -73,10 +76,10 @@ def filter_simple(flattened_data: Dict, exclude_keys: Set[str]) -> Dict:
 
 
 def get_diffs(file_1: str | Path, file_2: str | Path, json_1_data: Dict, json_2_data: Dict) -> Dict:
-    j1 = {f"{key}:{value}" for key, value in json_1_data.items()}
-    j2 = {f"{key}:{value}" for key, value in json_2_data.items()}
-    result = unflatten({value.split(":")[0]: value.split(":")[1] for value in (j1 - j2)})
-    result2 = unflatten({value.split(":")[0]: value.split(":")[1] for value in (j2 - j1)})
+    j1 = {f"{key}{DELIM}{value}" for key, value in json_1_data.items()}
+    j2 = {f"{key}{DELIM}{value}" for key, value in json_2_data.items()}
+    result = unflatten({value.split(DELIM)[0]: value.split(DELIM)[1] for value in (j1 - j2)})
+    result2 = unflatten({value.split(DELIM)[0]: value.split(DELIM)[1] for value in (j2 - j1)})
     return {str(file_1): result, str(file_2): result2}
 
 
@@ -131,7 +134,20 @@ def set_excluded_fields(preset: str) -> Tuple[Set[str], List[str]]:
         excluded.extend(["metadata.timestamp", "serialNumber",
                          "metadata.tools.components.[].version",
                          "metadata.tools.components.[].purl",
-                         "metadata.tools.components.[].bom-ref"])
+                         "metadata.tools.components.[].bom-ref",
+                         "components.[].properties",
+                         "components.[].evidence"
+                         ])
+        sort_fields.extend(["url", "content", "ref", "name", "value"])
+    elif preset == "cdxgen-minimal":
+        excluded.extend(["metadata.timestamp", "serialNumber",
+                         "metadata.tools.components.[].version",
+                         "metadata.tools.components.[].purl",
+                         "metadata.tools.components.[].bom-ref",
+                         "components.[].properties",
+                         "components.[].evidence",
+                         "components.[].licenses"
+                         ])
         sort_fields.extend(["url", "content", "ref", "name", "value"])
     return set(excluded), sort_fields
 
@@ -155,7 +171,7 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     if isinstance(lst[0], dict):
         if sort_key := get_sort_key(lst[0], sort_keys):
             return sorted(lst, key=lambda x: x[sort_key])
-        logging.warning("No key(s) specified for sorting. Cannot sort list of dictionaries.")
+        logging.debug("No key(s) specified for sorting. Cannot sort list of dictionaries.")
         return lst
     if isinstance(lst[0], (str, int)):
         lst.sort()
