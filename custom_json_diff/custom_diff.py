@@ -130,7 +130,7 @@ def remove_filepaths(data: Dict) -> Dict:
 def set_excluded_fields(preset: str) -> Tuple[Set[str], List[str]]:
     excluded = []
     sort_fields = []
-    if preset == "cdxgen":
+    if preset.startswith("cdxgen"):
         excluded.extend(["metadata.timestamp", "serialNumber",
                          "metadata.tools.components.[].version",
                          "metadata.tools.components.[].purl",
@@ -138,16 +138,8 @@ def set_excluded_fields(preset: str) -> Tuple[Set[str], List[str]]:
                          "components.[].properties",
                          "components.[].evidence"
                          ])
-        sort_fields.extend(["url", "content", "ref", "name", "value"])
-    elif preset == "cdxgen-minimal":
-        excluded.extend(["metadata.timestamp", "serialNumber",
-                         "metadata.tools.components.[].version",
-                         "metadata.tools.components.[].purl",
-                         "metadata.tools.components.[].bom-ref",
-                         "components.[].properties",
-                         "components.[].evidence",
-                         "components.[].licenses"
-                         ])
+        if preset == "cdxgen-extended":
+            excluded.append("components.[].licenses")
         sort_fields.extend(["url", "content", "ref", "name", "value"])
     return set(excluded), sort_fields
 

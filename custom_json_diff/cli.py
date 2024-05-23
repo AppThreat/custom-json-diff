@@ -46,7 +46,7 @@ def build_args():
         "--preset",
         action="store",
         help="Preset to use",
-        choices=["cdxgen", "cdxgen-minimal"],
+        choices=["cdxgen", "cdxgen-extended"],
         dest="preset",
     )
     return parser.parse_args()
@@ -56,7 +56,7 @@ def main():
     args = build_args()
     result, j1, j2 = compare_dicts(args.input[0], args.input[1], args.preset, args.exclude, args.config)
     if result == 0:
-        print("Files are identical.")
+        print("No differences found.")
     else:
         diffs = get_diffs(args.input[0], args.input[1], j1, j2)
         if args.output:
