@@ -28,3 +28,5 @@ jobs:
     - name: Run tests
       run: |
         python3 -m pytest test
+        python3 -m pip install types-toml
+        python3 -m mypy custom_json_diff

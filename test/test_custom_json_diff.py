@@ -1,6 +1,8 @@
 import pytest
 
-from custom_json_diff.custom_diff import load_json, sort_dict
+from custom_json_diff.custom_diff import (
+    compare_dicts, get_common, get_diffs, load_json, produce_bom_diff, sort_dict
+)
 
 
 @pytest.fixture
@@ -18,16 +20,22 @@ def data_3():
     return load_json("test/sbom-java.json", {"serialNumber", "metadata.timestamp", "metadata.tools.components.[].version"}, ["url", "content", "ref", "name", "value"])
 
 
+@pytest.fixture
+def data_4():
+    return load_json("test/sbom-python2.json", {"serialNumber", "metadata.timestamp", "metadata.tools.components.[].version"}, ["url", "content", "ref", "name", "value"])
+
+
 def test_load_json(data, data_3):
+    data = data.to_dict()
     assert "serialNumber" not in data
     assert "metadata.timestamp" not in data
-    assert "metadata.tools.components.[].version" not in data_3
+    assert "metadata.tools.components.[].version" not in data_3.to_dict()
 
 
 def test_sort_dict(data, data_2, data_3):
     x = {"a": 1, "b": 2, "c": [3, 2, 1], "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}]}
-    assert sort_dict(x, ["url", "content", "ref", "name", "value"], True) == {"a": 1, "b": 2, "c": [1, 2, 3], "d": [{"name": "test 2", "value": 2}, {"name": "test 3", "value": 1}]}
-    assert sort_dict(data, ["url", "content", "ref", "name", "value"], True) == {
+    assert sort_dict(x, ["url", "content", "ref", "name", "value"]) == {"a": 1, "b": 2, "c": [1, 2, 3], "d": [{"name": "test 2", "value": 2}, {"name": "test 3", "value": 1}]}
+    assert sort_dict(data.to_dict(True), ["url", "content", "ref", "name", "value"]) == {
         'bomFormat': 'CycloneDX',
         'components': [{'author': '',
                         'bom-ref': 'pkg:maven/com.zaxxer/HikariCP@3.4.2?type=jar',
@@ -2809,7 +2817,7 @@ def test_sort_dict(data, data_2, data_3):
         'specVersion': '1.5',
         'version': 1
     }
-    assert sort_dict(data_2, ["url", "content", "ref", "name", "value"], True) == {
+    assert sort_dict(data_2.to_dict(True), ["url", "content", "ref", "name", "value"]) == {
         'bomFormat': 'CycloneDX',
  'components': [{'bom-ref': 'pkg:pypi/behave@1.2.6',
                  'evidence': {'identity': {'confidence': 1,
@@ -3061,3 +3069,190 @@ def test_sort_dict(data, data_2, data_3):
  'specVersion': '1.5',
  'version': 1
                                  }
+
+
+def test_compare_dicts():
+    a, b, c = compare_dicts("test/sbom-python.json", "test/sbom-python2.json", "cdxgen")
+    assert a == 1
+    diffs = get_diffs("test/sbom-python.json", "test/sbom-python2.json", b, c)
+    assert diffs == {'test/sbom-python.json': {'components': [{'bom-ref': 'pkg:pypi/certifi@2024.2.2',
+                                           'name': 'certifi',
+                                           'purl': 'pkg:pypi/certifi@2024.2.2',
+                                           'version': '2024.2.2'},
+                                          {'bom-ref': 'pkg:pypi/selenium@3.141.0',
+                                           'name': 'selenium',
+                                           'purl': 'pkg:pypi/selenium@3.141.0',
+                                           'version': '3.141.0'},
+                                          {'bom-ref': 'pkg:pypi/urllib3@2.2.1',
+                                           'name': 'urllib3',
+                                           'purl': 'pkg:pypi/urllib3@2.2.1',
+                                           'version': '2.2.1'},
+                                          {'bom-ref': 'pkg:pypi/whitenoise@4.1.2',
+                                           'name': 'whitenoise',
+                                           'purl': 'pkg:pypi/whitenoise@4.1.2',
+                                           'version': '4.1.2'}]},
+ 'test/sbom-python2.json': {'services': [{'bom-ref': 'urn:service:mongo:latest',
+                                          'group': '',
+                                          'name': 'mongo',
+                                          'properties': [{'name': 'SrcFile',
+                                                          'value': '/mnt/work/sandbox/NodeGoat/docker-compose.yml'}],
+                                          'version': 'latest'},
+                                         {'bom-ref': 'urn:service:web:latest',
+                                          'group': '',
+                                          'name': 'web',
+                                          'properties': [{'name': 'SrcFile',
+                                                          'value': '/mnt/work/sandbox/NodeGoat/docker-compose.yml'}],
+                                          'version': 'latest'}]}}
+    commons = get_common(b, c)
+    assert commons == {
+        'bomFormat': 'CycloneDX',
+ 'components': [{'bom-ref': 'pkg:pypi/behave@1.2.6',
+                 'group': '',
+                 'name': 'behave',
+                 'purl': 'pkg:pypi/behave@1.2.6',
+                 'type': 'library',
+                 'version': '1.2.6'},
+                {'group': '', 'type': 'library'},
+                {'bom-ref': 'pkg:pypi/charset-normalizer@3.3.2',
+                 'group': '',
+                 'name': 'charset-normalizer',
+                 'purl': 'pkg:pypi/charset-normalizer@3.3.2',
+                 'type': 'library',
+                 'version': '3.3.2'},
+                {'bom-ref': 'pkg:pypi/django@2.1.7',
+                 'group': '',
+                 'name': 'django',
+                 'purl': 'pkg:pypi/django@2.1.7',
+                 'type': 'framework',
+                 'version': '2.1.7'},
+                {'bom-ref': 'pkg:pypi/gunicorn@19.9.0',
+                 'group': '',
+                 'name': 'gunicorn',
+                 'purl': 'pkg:pypi/gunicorn@19.9.0',
+                 'type': 'library',
+                 'version': '19.9.0'},
+                {'bom-ref': 'pkg:pypi/idna@3.7',
+                 'group': '',
+                 'name': 'idna',
+                 'purl': 'pkg:pypi/idna@3.7',
+                 'type': 'library',
+                 'version': '3.7'},
+                {'bom-ref': 'pkg:pypi/parse@1.20.1',
+                 'group': '',
+                 'name': 'parse',
+                 'purl': 'pkg:pypi/parse@1.20.1',
+                 'type': 'library',
+                 'version': '1.20.1'},
+                {'bom-ref': 'pkg:pypi/parse-type@0.6.2',
+                 'group': '',
+                 'name': 'parse-type',
+                 'purl': 'pkg:pypi/parse-type@0.6.2',
+                 'type': 'library',
+                 'version': '0.6.2'},
+                {'bom-ref': 'pkg:pypi/pillow@5.4.1',
+                 'group': '',
+                 'name': 'pillow',
+                 'purl': 'pkg:pypi/pillow@5.4.1',
+                 'type': 'library',
+                 'version': '5.4.1'},
+                {'bom-ref': 'pkg:pypi/python-owasp-zap-v2.4@0.0.14',
+                 'group': '',
+                 'name': 'python-owasp-zap-v2.4',
+                 'purl': 'pkg:pypi/python-owasp-zap-v2.4@0.0.14',
+                 'type': 'library',
+                 'version': '0.0.14'},
+                {'bom-ref': 'pkg:pypi/pytz@2024.1',
+                 'group': '',
+                 'name': 'pytz',
+                 'purl': 'pkg:pypi/pytz@2024.1',
+                 'type': 'library',
+                 'version': '2024.1'},
+                {'bom-ref': 'pkg:pypi/requests@2.31.0',
+                 'group': '',
+                 'name': 'requests',
+                 'purl': 'pkg:pypi/requests@2.31.0',
+                 'type': 'library',
+                 'version': '2.31.0'},
+                {'group': '', 'type': 'library'},
+                {'bom-ref': 'pkg:pypi/six@1.16.0',
+                 'group': '',
+                 'name': 'six',
+                 'purl': 'pkg:pypi/six@1.16.0',
+                 'type': 'library',
+                 'version': '1.16.0'},
+                {'group': '', 'type': 'library'},
+                {'group': '', 'type': 'library'}],
+ 'dependencies': [{'dependsOn': ['pkg:pypi/parse-type@0.6.2',
+                                 'pkg:pypi/parse@1.20.1',
+                                 'pkg:pypi/six@1.16.0'],
+                   'ref': 'pkg:pypi/behave@1.2.6'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/certifi@2024.2.2'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/charset-normalizer@3.3.2'},
+                  {'dependsOn': ['pkg:pypi/django@2.1.7',
+                                 'pkg:pypi/pillow@5.4.1',
+                                 'pkg:pypi/behave@1.2.6',
+                                 'pkg:pypi/gunicorn@19.9.0',
+                                 'pkg:pypi/python-owasp-zap-v2.4@0.0.14',
+                                 'pkg:pypi/selenium@3.141.0',
+                                 'pkg:pypi/whitenoise@4.1.2'],
+                   'ref': 'pkg:pypi/django-goat@latest'},
+                  {'dependsOn': ['pkg:pypi/pytz@2024.1'],
+                   'ref': 'pkg:pypi/django@2.1.7'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/gunicorn@19.9.0'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/idna@3.7'},
+                  {'dependsOn': ['pkg:pypi/parse@1.20.1',
+                                 'pkg:pypi/six@1.16.0'],
+                   'ref': 'pkg:pypi/parse-type@0.6.2'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/parse@1.20.1'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/pillow@5.4.1'},
+                  {'dependsOn': ['pkg:pypi/requests@2.31.0',
+                                 'pkg:pypi/six@1.16.0'],
+                   'ref': 'pkg:pypi/python-owasp-zap-v2.4@0.0.14'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/pytz@2024.1'},
+                  {'dependsOn': ['pkg:pypi/certifi@2024.2.2',
+                                 'pkg:pypi/charset-normalizer@3.3.2',
+                                 'pkg:pypi/idna@3.7',
+                                 'pkg:pypi/urllib3@2.2.1'],
+                   'ref': 'pkg:pypi/requests@2.31.0'},
+                  {'dependsOn': ['pkg:pypi/urllib3@2.2.1'],
+                   'ref': 'pkg:pypi/selenium@3.141.0'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/six@1.16.0'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/urllib3@2.2.1'},
+                  {'dependsOn': [], 'ref': 'pkg:pypi/whitenoise@4.1.2'}],
+ 'metadata': {'authors': [{'name': 'OWASP Foundation'}],
+              'component': {'bom-ref': 'pkg:pypi/django-goat@latest',
+                            'group': '',
+                            'name': 'django-goat',
+                            'purl': 'pkg:pypi/django-goat@latest',
+                            'type': 'application',
+                            'version': 'latest'},
+              'lifecycles': [{'phase': 'build'}],
+              'tools': {'components': [{'author': 'OWASP Foundation',
+                                        'group': '@cyclonedx',
+                                        'name': 'cdxgen',
+                                        'publisher': 'OWASP Foundation',
+                                        'type': 'application'}]}},
+ 'specVersion': '1.5',
+ 'version': 1}
+    bom_diff = produce_bom_diff(diffs, commons, "test/sbom-python.json", "test/sbom-python2.json")
+    assert bom_diff == {'common': {'components': ['pkg:pypi/behave@1.2.6',
+                           'pkg:pypi/charset-normalizer@3.3.2',
+                           'pkg:pypi/django@2.1.7',
+                           'pkg:pypi/gunicorn@19.9.0',
+                           'pkg:pypi/idna@3.7',
+                           'pkg:pypi/parse@1.20.1',
+                           'pkg:pypi/parse-type@0.6.2',
+                           'pkg:pypi/pillow@5.4.1',
+                           'pkg:pypi/python-owasp-zap-v2.4@0.0.14',
+                           'pkg:pypi/pytz@2024.1',
+                           'pkg:pypi/requests@2.31.0',
+                           'pkg:pypi/six@1.16.0'],
+            'services': []},
+ 'test/sbom-python.json': {'components': ['pkg:pypi/certifi@2024.2.2',
+                                          'pkg:pypi/selenium@3.141.0',
+                                          'pkg:pypi/urllib3@2.2.1',
+                                          'pkg:pypi/whitenoise@4.1.2'],
+                           'services': []},
+ 'test/sbom-python2.json': {'components': [],
+                            'services': ['urn:service:mongo:latest',
+                                         'urn:service:web:latest']}}

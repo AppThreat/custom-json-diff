@@ -1,7 +1,7 @@
 [project]
 name = "custom-json-diff"
-version = "0.3.0"
-description = "Custom JSON diff tool"
+version = "0.4.0"
+description = "Custom JSON diffing and comparison tool."
 authors = [
   { name = "Caroline Russell", email = "caroline@appthreat.dev" },
 ]
@@ -30,7 +30,8 @@ custom-json-diff = "custom_json_diff.cli:main"
 
 [project.optional-dependencies]
 dev = [
-"pytest",
+  "mypy",
+  "pytest",
 ]
 
 [build-system]
