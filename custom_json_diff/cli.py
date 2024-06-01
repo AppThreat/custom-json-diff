@@ -1,11 +1,7 @@
 import argparse
 
 from custom_json_diff.custom_diff import (
-    compare_dicts,
-    get_common,
-    get_diffs,
-    perform_bom_diff,
-    report_results
+    compare_dicts, get_diff, perform_bom_diff, report_results
 )
 
 
@@ -27,12 +23,13 @@ def build_args():
         help="Export JSON of differences to this file.",
         dest="output",
     )
-    # parser.add_argument(
-    #     "--common",
-    #      action="store_true",
-    #      help="Include common elements as well as differences",
-    #      dest="common",
-    # )
+    parser.add_argument(
+        "-a",
+        "--allow-new-versions",
+        action="store_true",
+        help="Allow new versions in BOM comparison.",
+        dest="allow_new_versions",
+    )
     parser.add_argument(
         "-b",
         "--bom-diff",
@@ -70,13 +67,14 @@ def build_args():
 
 def main():
     args = build_args()
-    result, j1, j2 = compare_dicts(args.input[0], args.input[1], args.preset, args.exclude, args.config)
-    diffs = get_diffs(args.input[0], args.input[1], j1, j2)
+    settings = args.preset or args.config or args.exclude
+    result, j1, j2 = compare_dicts(args.input[0], args.input[1], settings, args.bom_diff, args.allow_new_versions)
+
     if args.bom_diff:
-        common = get_common(j1, j2)
-        perform_bom_diff(result, diffs, common, args.input[0], args.input[1], args.output)
+        result_summary = perform_bom_diff(j1, j2)
     else:
-        report_results(result, diffs, args.output)
+        result_summary = get_diff(args.input[0], args.input[1], j1, j2)
+    report_results(result, result_summary, args.output)
 
 
 if __name__ == "__main__":
