@@ -1,3 +1,6 @@
 [settings]
 excluded_fields = ["serialNumber", "metadata.timestamp"]
 sort_keys = ["url", "content", "ref", "name", "value"]
+
+[bom_settings]
+allow_new_versions = true
