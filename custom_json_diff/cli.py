@@ -74,7 +74,7 @@ def main():
         result_summary = perform_bom_diff(j1, j2)
     else:
         result_summary = get_diff(args.input[0], args.input[1], j1, j2)
-    report_results(result, result_summary, args.output)
+    report_results(result, result_summary, args.output, args.bom_diff, j1.filename, j2.filename)
 
 
 if __name__ == "__main__":

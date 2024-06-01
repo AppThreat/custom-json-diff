@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>BOM Diff Report</title>
+    <style>
+        .commons_summary {
+            display: flex;
+        }
+
+        .commons_summary > div {
+            width: 50%;
+        }
+    </style>
+</head>
+<body>
+<div><h1 style="text-align:center;text-underline: black">BOM Diff Report</h1></div>
+<div>
+    <h2 style="text-align: center">Differential</h2>
+    <div class="commons_summary">
+        <div><h3 style="text-align: center">{{ json_1 }}</h3></div>
+        <div><h3 style="text-align: center">{{ json_2 }}</h3></div>
+    </div>
+    <h4 style="text-align: center">Libraries</h4>
+    <div class="commons_summary">
+        <div>
+            {% for item in diff_lib_1 %}
+                <details>
+                    <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                    <ul>
+                        <li>name: {{ item['name'] }}</li>
+                        <li>version: {{ item['version'] }}</li>
+                        <li>group: {{ item['group'] }}</li>
+                        <li>purl: {{ item['purl'] }}</li>
+                        <li>bom-ref: {{ item['bom-ref'] }}</li>
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+        <div>
+            {% for item in diff_lib_2 %}
+                <details>
+                    <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                    <ul>
+                        <li>name: {{ item['name'] }}</li>
+                        <li>version: {{ item['version'] }}</li>
+                        <li>group: {{ item['group'] }}</li>
+                        <li>purl: {{ item['purl'] }}</li>
+                        <li>bom-ref: {{ item['bom-ref'] }}</li>
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+    </div>
+    <h4 style="text-align: center">Frameworks</h4>
+    <div class="commons_summary">
+        <div>
+            {% for item in diff_frameworks_1 %}
+                <details>
+                    <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                    <ul>
+                        <li>name: {{ item['name'] }}</li>
+                        <li>version: {{ item['version'] }}</li>
+                        <li>group: {{ item['group'] }}</li>
+                        <li>purl: {{ item['purl'] }}</li>
+                        <li>bom-ref: {{ item['bom-ref'] }}</li>
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+        <div>
+            {% for item in diff_frameworks_2 %}
+                <details>
+                    <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                    <ul>
+                        <li>name: {{ item['name'] }}</li>
+                        <li>version: {{ item['version'] }}</li>
+                        <li>group: {{ item['group'] }}</li>
+                        <li>purl: {{ item['purl'] }}</li>
+                        <li>bom-ref: {{ item['bom-ref'] }}</li>
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+    </div>
+    <h4 style="text-align: center">Services</h4>
+    <div class="commons_summary">
+        <div>
+            {% for item in diff_services_1 %}
+                <details>
+                    <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                    <ul>
+                        <li>name: {{ item['name'] }}</li>
+                        <li>version: {{ item['version'] }}</li>
+                        <li>group: {{ item['group'] }}</li>
+                        <li>bom-ref: {{ item['bom-ref'] }}</li>
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+        <div>
+            {% for item in diff_services_2 %}
+                <details>
+                    <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                    <ul>
+                        <li>name: {{ item['name'] }}</li>
+                        <li>version: {{ item['version'] }}</li>
+                        <li>group: {{ item['group'] }}</li>
+                        <li>bom-ref: {{ item['bom-ref'] }}</li>
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+    </div>
+    <h4 style="text-align: center">Dependencies</h4>
+    <div class="commons_summary">
+        <div>
+            {% for item in diff_deps_1 %}
+                <details>
+                    <summary>{{ item['ref'] }}</summary>
+                    <ul>
+                        {% for dep in item['dependsOn'] %}
+                            <li>{{ dep }}</li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+        <div>
+            {% for item in diff_deps_2 %}
+                <details>
+                    <summary>{{ item['ref'] }}</summary>
+                    <ul>
+                        {% for dep in item['dependsOn'] %}
+                            <li>{{ dep }}</li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<div>
+    <div>
+        <h2 style="text-align:center">Common Components</h2>
+        <div class='commons_summary'>
+            <div>
+                <h3>Libraries</h3>
+                {% for item in common_lib %}
+                    <details>
+                        <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                        <ul>
+                            <li>name: {{ item['name'] }}</li>
+                            <li>version: {{ item['version'] }}</li>
+                            <li>group: {{ item['group'] }}</li>
+                            <li>purl: {{ item['purl'] }}</li>
+                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                        </ul>
+                    </details>
+                {% endfor %}
+            </div>
+            <div>
+                <h3>Frameworks</h3>
+                {% for item in common_frameworks %}
+                    <details>
+                        <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                        <ul>
+                            <li>name: {{ item['name'] }}</li>
+                            <li>version: {{ item['version'] }}</li>
+                            <li>group: {{ item['group'] }}</li>
+                            <li>purl: {{ item['purl'] }}</li>
+                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                        </ul>
+                    </details>
+                {% endfor %}
+            </div>
+        </div>
+        <div class='commons_summary'>
+            <div>
+                <h3>Services</h3>
+                {% for item in common_services %}
+                    <details>
+                        <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                        <ul>
+                            <li>name: {{ item['name'] }}</li>
+                            <li>version: {{ item['version'] }}</li>
+                            <li>group: {{ item['group'] }}</li>
+                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                        </ul>
+                    </details>
+                {% endfor %}
+            </div>
+            <div>
+                <h3>Dependencies</h3>
+                {% for item in common_deps %}
+                    <details>
+                        <summary>{{ item['ref'] }}</summary>
+                        <ul>
+                            {% for dep in item['dependsOn'] %}
+                                <li>{{ dep }}</li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
