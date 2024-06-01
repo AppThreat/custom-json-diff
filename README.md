@@ -12,19 +12,22 @@ ignore in the comparison and sorts all fields.
 
 ## CLI Usage
 ```
-usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] (-c CONFIG | -x EXCLUDE [EXCLUDE ...] | -p {cdxgen})
+usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] [-b] (-c CONFIG | -x EXCLUDE [EXCLUDE ...] | -p {cdxgen,cdxgen-extended})
 
 options:
   -h, --help            show this help message and exit
   -i INPUT INPUT, --input INPUT INPUT
-                        Two JSON files to compare
+                        Two JSON files to compare.
   -o OUTPUT, --output OUTPUT
-                        Export JSON of differences to this file
+                        Export JSON of differences to this file.
+  -a, --allow-new-versions
+                        Allow new versions in BOM comparison.
+  -b, --bom-diff        Produce a comparison of CycloneDX BOMs.
   -c CONFIG, --config-file CONFIG
-                        Import TOML configuration file
+                        Import TOML configuration file.
   -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
-                        Exclude field(s) from comparison
-  -p {cdxgen}, --preset {cdxgen}
+                        Exclude field(s) from comparison.
+  -p {cdxgen,cdxgen-extended}, --preset {cdxgen,cdxgen-extended}
                         Preset to use
 
 ```
@@ -58,10 +61,9 @@ is flattened to:
 ```
 
 To exclude field2, you would specify `field1.field2`. To exclude the `a` field in the array of 
-objects, you would specify `field1.field3.[].a`. custom-json-diff will create a regex which will 
-account for the array index in the field name. Multiple fields may be specified separated by a 
-space. To better understand what your fields should be, check out json-flatten, which is the 
-package used for this function.
+objects, you would specify `field1.field3.[].a` (do NOT include the array index, just do `[]`). 
+Multiple fields may be specified separated by a space. To better understand what your fields should
+be, check out json-flatten, which is the package used for this function.
 
 ## Sorting
 
@@ -75,4 +77,7 @@ The first key located from the provided keys that is present in the object will 
 [settings]
 excluded_fields = ["serialNumber", "metadata.timestamp"]
 sort_keys = ["url", "content", "ref", "name", "value"]
+
+[bom_diff]
+allow_new_versions = false
 ```
