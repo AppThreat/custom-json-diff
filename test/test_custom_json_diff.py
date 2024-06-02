@@ -5,26 +5,41 @@ import pytest
 from custom_json_diff.custom_diff import (
     compare_dicts, get_diff, load_json, sort_dict
 )
+from custom_json_diff.custom_diff_classes import Options
 
 
 @pytest.fixture
 def java_1_flat():
-    return load_json("test/sbom-java.json", False, "cdxgen")
+    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", preset="cdxgen")
+    return load_json("test/sbom-java.json", options)
 
 
 @pytest.fixture
 def java_2_flat():
-    return load_json("test/sbom-java2.json", False, "cdxgen")
+    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", preset="cdxgen")
+    return load_json("test/sbom-java2.json", options)
 
 
 @pytest.fixture
 def python_1_flat():
-    return load_json("test/sbom-python.json", False, "cdxgen")
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", preset="cdxgen")
+    return load_json("test/sbom-python.json", options)
 
 
 @pytest.fixture
 def python_2_flat():
-    return load_json("test/sbom-python2.json", False, "cdxgen")
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", preset="cdxgen")
+    return load_json("test/sbom-python2.json", options)
+
+
+@pytest.fixture
+def options_1():
+    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", preset="cdxgen")
+
+
+@pytest.fixture
+def options_2():
+    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", preset="cdxgen")
 
 
 @pytest.fixture
@@ -46,10 +61,10 @@ def test_sort_dict(java_1_flat, python_1_flat, java_2_flat, results):
     assert sort_dict(java_2_flat.to_dict(True), ["url", "content", "ref", "name", "value"]) == results["result_3"]
     assert sort_dict(python_1_flat.to_dict(True), ["url", "content", "ref", "name", "value"]) == results["result_4"]
 
-def test_compare_dicts(results):
-    a, b, c = compare_dicts("test/sbom-python.json", "test/sbom-python2.json", "cdxgen", False, False)
+def test_compare_dicts(results, options_2):
+    a, b, c = compare_dicts(options_2)
     assert a == 1
-    diffs = get_diff("test/sbom-python.json", "test/sbom-python2.json", b, c)
+    diffs = get_diff(b, c, options_2)
     assert diffs == results["result_5"]
     commons = b.intersection(c).to_dict(True)
     assert commons == results["result_6"]

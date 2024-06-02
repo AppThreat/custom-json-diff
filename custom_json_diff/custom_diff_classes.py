@@ -1,8 +1,12 @@
 import contextlib
+import logging
 import re
+import sys
+from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 
 import semver
+import toml
 from json_flatten import unflatten  # type: ignore
 
 
@@ -96,7 +100,7 @@ class FlatDicts:
         intersection = [i for i in self.data if i in other.data]
         return FlatDicts(intersection)
 
-    def filter_out_keys(self, exclude_keys: Set[str]) -> "FlatDicts":
+    def filter_out_keys(self, exclude_keys: Set[str] | List[str]) -> "FlatDicts":
         filtered_data = [i for i in self.data if check_key(i.search_key, exclude_keys)]
         self.data = filtered_data
         return self
@@ -112,7 +116,39 @@ class FlatElement:
         return self.search_key == other.search_key
 
 
-def check_key(key: str, exclude_keys: Set[str]) -> bool:
+@dataclass
+class Options:  # type: ignore
+    allow_new_versions: bool = False
+    bom_diff: bool = False
+    config: str = ""
+    exclude: list | set = field(default_factory=set)
+    file_1: str = ""
+    file_2: str = ""
+    output: str = ""
+    preset: str = ""
+    report_template: str = ""
+    sort_keys: list = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.config:
+            with open(self.config, "r", encoding="utf-8") as f:
+                try:
+                    toml_data = toml.load(f)
+                except toml.TomlDecodeError:
+                    logging.error("Invalid TOML.")
+                    sys.exit(1)
+            self.allow_new_versions = toml_data.get("bom_diff", {}).get("allow_new_versions", False)
+            self.report_template = toml_data.get("bom_diff", {}).get("report_template", "")
+            self.sort_keys = toml_data.get("settings", {}).get("sort_keys", [])
+            self.exclude = set(toml_data.get("settings", {}).get("excluded_fields", []))
+        elif self.preset:
+            self.exclude, self.sort_keys = set_excluded_fields(self.preset)
+        elif self.exclude:
+            self.exclude = set(self.exclude)
+            self.sort_keys = []
+
+
+def check_key(key: str, exclude_keys: Set[str] | List[str]) -> bool:
     return not any(key.startswith(k) for k in exclude_keys)
 
 
@@ -180,6 +216,23 @@ def parse_bom_dict(data: Dict, allow_new_versions: bool):
             for i in value:
                 dependencies.append(BomDependency(i, allow_new_versions, ))
     return metadata, components, services, dependencies
+
+
+def set_excluded_fields(preset: str) -> Tuple[Set[str], List[str]]:
+    excluded = []
+    sort_fields = []
+    if preset.startswith("cdxgen"):
+        excluded.extend(["metadata.timestamp", "serialNumber",
+                         "metadata.tools.components.[].version",
+                         "metadata.tools.components.[].purl",
+                         "metadata.tools.components.[].bom-ref",
+                         "components.[].properties",
+                         "components.[].evidence"
+                         ])
+        if preset == "cdxgen-extended":
+            excluded.append("components.[].licenses")
+        sort_fields.extend(["url", "content", "ref", "name", "value"])
+    return set(excluded), sort_fields
 
 
 def set_version(version: str, allow_new_versions: bool = False) -> semver.Version | str:
