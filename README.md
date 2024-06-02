@@ -11,8 +11,13 @@ ignore in the comparison and sorts all fields.
 `pip install custom-json-diff`
 
 ## CLI Usage
+
 ```
-usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] [-b] (-c CONFIG | -x EXCLUDE [EXCLUDE ...] | -p {cdxgen,cdxgen-extended})
+usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] (-c CONFIG | -x EXCLUDE [EXCLUDE ...] | -p {cdxgen,cdxgen-extended}) {bom-diff} ...
+
+positional arguments:
+  {bom-diff}            subcommand help
+    bom-diff            compare CycloneDX BOMs
 
 options:
   -h, --help            show this help message and exit
@@ -20,16 +25,24 @@ options:
                         Two JSON files to compare.
   -o OUTPUT, --output OUTPUT
                         Export JSON of differences to this file.
-  -a, --allow-new-versions
-                        Allow new versions in BOM comparison.
-  -b, --bom-diff        Produce a comparison of CycloneDX BOMs.
   -c CONFIG, --config-file CONFIG
                         Import TOML configuration file.
   -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
                         Exclude field(s) from comparison.
   -p {cdxgen,cdxgen-extended}, --preset {cdxgen,cdxgen-extended}
                         Preset to use
+```
 
+bom-diff usage
+```
+usage: cjd bom-diff [-h] [-a] [-r REPORT_TEMPLATE]
+
+options:
+  -h, --help            show this help message and exit
+  -a, --allow-new-versions
+                        Allow new versions in BOM comparison.
+  -r REPORT_TEMPLATE, --report-template REPORT_TEMPLATE
+                        Jinja2 template to use for report generation.
 ```
 
 ## Specifying fields to exclude
@@ -65,6 +78,9 @@ objects, you would specify `field1.field3.[].a` (do NOT include the array index,
 Multiple fields may be specified separated by a space. To better understand what your fields should
 be, check out json-flatten, which is the package used for this function.
 
+>Note: In the context of BOM diffing, this list is only used for the metadata, not the components, 
+> services, or dependencies.
+
 ## Sorting
 
 custom-json-diff will sort the imported JSON alphabetically. If your JSON document contains arrays 
@@ -80,4 +96,5 @@ sort_keys = ["url", "content", "ref", "name", "value"]
 
 [bom_diff]
 allow_new_versions = false
+report_template = "my_template.j2"
 ```

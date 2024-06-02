@@ -4,3 +4,4 @@ sort_keys = ["url", "content", "ref", "name", "value"]
 
 [bom_settings]
 allow_new_versions = true
+report_template = "custom_json_diff/bom_diff_template.j2"
