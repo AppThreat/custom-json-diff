@@ -8,6 +8,7 @@ from custom_json_diff.custom_diff_classes import Options
 
 def build_args():
     parser = argparse.ArgumentParser()
+    parser.set_defaults(bom_diff=False, allow_new_versions=False, report_template=None)
     subparsers = parser.add_subparsers(help="subcommand help")
     parser_bom_diff = subparsers.add_parser("bom-diff", help="compare CycloneDX BOMs")
     parser_bom_diff.set_defaults(bom_diff=True)
@@ -18,13 +19,13 @@ def build_args():
         help="Allow new versions in BOM comparison.",
         dest="allow_new_versions",
     )
-    # parser_bom_diff.add_argument(
-    #     "-r",
-    #     "--report-template",
-    #     action="store",
-    #     help="Jinja2 template to use for report generation.",
-    #     dest="report_template",
-    # )
+    parser_bom_diff.add_argument(
+        "-r",
+        "--report-template",
+        action="store",
+        help="Jinja2 template to use for report generation.",
+        dest="report_template",
+    )
     parser.add_argument(
         "-i",
         "--input",
