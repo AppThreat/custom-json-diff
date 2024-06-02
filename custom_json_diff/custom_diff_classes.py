@@ -47,7 +47,7 @@ class BomDicts:
 
     def __eq__(self, other):
         return (self.data == other.data and self.components == other.components and
-                self.services == other.services)
+                self.services == other.services and self.dependencies == other.dependencies)
 
     def __ne__(self, other):
         return not self == other

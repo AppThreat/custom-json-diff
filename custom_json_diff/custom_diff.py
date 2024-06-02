@@ -1,11 +1,13 @@
 import json
 import logging
+import os
 import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 import toml
+from jinja2 import Environment
 from json_flatten import flatten, unflatten  # type: ignore
 
 from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts
@@ -20,15 +22,43 @@ def compare_dicts(json1: str, json2: str, settings: str | List[str], bom_diff: b
                             bom_diff=bom_diff)
     json_2_data = load_json(json2, allow_new_versions=allow_new_versions, settings=settings,
                             bom_diff=bom_diff)
-    if json_1_data.data == json_2_data.data:
+    if json_1_data == json_2_data:
         return 0, json_1_data, json_2_data
     else:
         return 1, json_1_data, json_2_data
+
+def export_html_report(outfile: str, diffs: Dict, json_1: str, json_2: str) -> None:
+    template_file =  os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),"bom_diff_template.j2")
+    with open(template_file, "r", encoding="utf-8") as tmpl_file:
+        template = tmpl_file.read()
+    jinja_env = Environment(autoescape=False)
+    jinja_tmpl = jinja_env.from_string(template)
+    report_result = jinja_tmpl.render(
+        common_lib = diffs.get("commons_summary", {}).get("components", {}).get("libraries", []),
+        common_frameworks = diffs.get("commons_summary", {}).get("components", {}).get("frameworks", []),
+        common_services = diffs.get("commons_summary", {}).get("services", []),
+        common_deps = diffs.get("commons_summary", {}).get("dependencies", []),
+        diff_lib_1 = diffs.get("diff_summary", {}).get(json_1, {}).get("components", {}).get("libraries", []),
+        diff_lib_2 = diffs.get("diff_summary", {}).get(json_2, {}).get("components", {}).get("libraries", []),
+        diff_frameworks_1=diffs.get("diff_summary", {}).get(json_1, {}).get("components", {}).get("frameworks", []),
+        diff_frameworks_2=diffs.get("diff_summary", {}).get(json_2, {}).get("components", {}).get("frameworks", []),
+        diff_services_1=diffs.get("diff_summary", {}).get(json_1, {}).get("services", []),
+        diff_services_2=diffs.get("diff_summary", {}).get(json_2, {}).get("services", []),
+        diff_deps_1=diffs.get("diff_summary", {}).get(json_1, {}).get("dependencies", []),
+        diff_deps_2=diffs.get("diff_summary", {}).get(json_2, {}).get("dependencies", []),
+        json_1=json_1,
+        json_2=json_2
+    )
+    with open(outfile, "w", encoding="utf-8") as f:
+        f.write(report_result)
+    print(f"HTML report generated: {outfile}")
 
 
 def export_results(outfile: str, diffs: Dict) -> None:
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(json.dumps(diffs, indent=2))
+    print(f"JSON report generated: {outfile}")
 
 
 def filter_dict(data: Dict, exclude_keys: Set[str], sort_keys: List[str]) -> FlatDicts:
@@ -142,12 +172,15 @@ def populate_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Dict:
     return diff
 
 
-def report_results(status: int, diffs: Dict, outfile: str):
+def report_results(status: int, diffs: Dict, outfile: str, bom_diff: bool, json_1: str, json_2: str) -> None:
     if status == 0:
         print("No differences found.")
     else:
         print("Differences found.")
         handle_results(outfile, diffs)
+    if bom_diff and outfile:
+        report_file = outfile.replace(".json", "") + ".html"
+        export_html_report(report_file, diffs, json_1, json_2)
 
 
 def set_excluded_fields(preset: str) -> Tuple[Set[str], List[str], bool]:
