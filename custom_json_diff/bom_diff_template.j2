@@ -189,7 +189,7 @@
             </tr>
             <tr>
                 <th style="width: 8%">services</th>
-                <td style="width: 41%">{% for item in common_lib %}
+                <td style="width: 41%">{% for item in common_services %}
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
@@ -197,21 +197,22 @@
                             <li>version: {{ item['version'] }}</li>
                             <li>group: {{ item['group'] }}</li>
                             <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            <li>endpoints: {{ "<br/>".join(item["endpoints"]) }}</li>
                         </ul>
                     </details>
                 {% endfor %}</td>
                 <th style="width: 8%">dependencies</th>
-                <td style="width: 41%">                {% for item in common_deps %}
+                <td style="width: 41%">{% for item in common_deps %}
                     <details>
-                        <summary>{{ item['short_ref'] }}</summary>
+                        <summary>{{ item['short_ref'] }} ({{ item['dependsOn'] | length }})</summary>
                         <ul>
                             <li>ref: {{ item['ref'] }}</li>
                             <li>dependencies:
-                                                        <ul>
+                            <ul>
                             {% for dep in item['dependsOn'] %}
                                 <li>{{ dep }}</li>
                             {% endfor %}
-                        </ul>
+                            </ul>
                             </li>
                         </ul>
 
