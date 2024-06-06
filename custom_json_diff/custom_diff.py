@@ -11,6 +11,13 @@ from json_flatten import flatten, unflatten  # type: ignore
 from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts, Options
 
 
+def calculate_pcts(diff_stats: Dict, j1_counts: Dict) -> List[list[str]]:
+    return [
+        [f"Common {key} found: ", f"{value}/{j1_counts[key]}"]
+        for key, value in diff_stats.items()
+    ]
+
+
 def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
     return any(regex.match(key) for regex in regex_keys)
 
@@ -24,7 +31,7 @@ def compare_dicts(options: Options) -> Tuple[int, FlatDicts | BomDicts, FlatDict
         return 1, json_1_data, json_2_data
 
 
-def export_html_report(outfile: str, diffs: Dict, options: Options) -> None:
+def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, options: Options) -> None:
     if options.report_template:
         template_file = options.report_template
     else:
@@ -39,35 +46,33 @@ def export_html_report(outfile: str, diffs: Dict, options: Options) -> None:
         diffs["diff_summary"][options.file_1]["dependencies"], purl_regex)
     diffs["diff_summary"][options.file_2]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_2]["dependencies"], purl_regex)
-    diffs["commons_summary"]["dependencies"] = parse_purls(
-        diffs["commons_summary"]["dependencies"], purl_regex)
+    diffs["common_summary"]["dependencies"] = parse_purls(
+        diffs["common_summary"]["dependencies"], purl_regex)
+    stats_summary = calculate_pcts(generate_diff_counts(diffs), j1.generate_counts())
     report_result = jinja_tmpl.render(
-        common_lib=diffs.get("commons_summary", {}).get("components", {}).get("libraries", []),
-        common_frameworks=diffs.get("commons_summary", {}).get("components", {}).get("frameworks", []),
-        common_services=diffs.get("commons_summary", {}).get("services", []),
-        common_deps=diffs.get("commons_summary", {}).get("dependencies", []),
-        diff_lib_1=diffs.get("diff_summary", {}).get(options.file_1, {}).get("components", {}).get("libraries", []),
-        diff_lib_2=diffs.get("diff_summary", {}).get(options.file_2, {}).get("components", {}).get("libraries", []),
-        diff_frameworks_1=diffs.get("diff_summary", {}).get(options.file_1, {}).get("components", {}).get("frameworks", []),
-        diff_frameworks_2=diffs.get("diff_summary", {}).get(options.file_2, {}).get("components", {}).get("frameworks", []),
-        diff_services_1=diffs.get("diff_summary", {}).get(options.file_1, {}).get("services", []),
-        diff_services_2=diffs.get("diff_summary", {}).get(options.file_2, {}).get("services", []),
-        diff_deps_1=diffs.get("diff_summary", {}).get(options.file_1, {}).get("dependencies", []),
-        diff_deps_2=diffs.get("diff_summary", {}).get(options.file_2, {}).get("dependencies", []),
+        common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
+        common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
+        common_services=diffs["common_summary"].get("services", []),
+        common_deps=diffs["common_summary"].get("dependencies", []),
+        common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
+        diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("libraries", []),
+        diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("libraries", []),
+        diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("frameworks", []),
+        diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("frameworks", []),
+        diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("applications", []),
+        diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("applications", []),
+        diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
+        diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
+        diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
+        diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
         bom_1=options.file_1,
-        bom_2=options.file_2
+        bom_2=options.file_2,
+        stats=stats_summary,
+        comp_only=options.comp_only
     )
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(report_result)
     print(f"HTML report generated: {outfile}")
-
-
-def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
-    if not deps:
-        return deps
-    for i in deps:
-        i["short_ref"] = match[0] if (match := regex.findall(i["ref"])) else i["ref"]
-    return deps
 
 
 def export_results(outfile: str, diffs: Dict) -> None:
@@ -77,25 +82,16 @@ def export_results(outfile: str, diffs: Dict) -> None:
 
 
 def filter_dict(data: Dict, options: Options) -> FlatDicts:
-    data = flatten(sort_dict(data, options.sort_keys))
+    data = flatten(sort_dict_lists(data, options.sort_keys))
     return FlatDicts(data).filter_out_keys(options.exclude)
 
 
-def get_bom_commons(bom_1: BomDicts, bom_2: BomDicts) -> Dict:
-    commons = {"metadata": (bom_1.data.intersection(bom_2.data)).to_dict(True)}
-    libraries = [i.original_data for i in bom_1.components if i in bom_2.components and i.component_type == "library"]
-    frameworks = [i.original_data for i in bom_1.components if i in bom_2.components and i.component_type == "framework"]
-    commons["components"] = {"libraries": libraries, "frameworks": frameworks}
-    commons["services"] = [i.original_data for i in bom_1.services if i in bom_2.services]  # type: ignore
-    commons["dependencies"] = [i.original_data for i in bom_1.dependencies if i in bom_2.dependencies]  # type: ignore
-    return commons
-
-
-def get_bom_diff(bom_1: BomDicts, bom_2: BomDicts, options: Options) -> Dict:
-    diff = get_diff(bom_1.data, bom_2.data, options)
-    diff[bom_1.filename] |= populate_bom_diff(bom_1, bom_2)
-    diff[bom_2.filename] |= populate_bom_diff(bom_2, bom_1)
-    return diff
+def generate_diff_counts(diffs) -> Dict:
+    return {"components": len(diffs["common_summary"].get("components", {}).get("libraries", [])) + len(
+        diffs["common_summary"].get("components", {}).get("frameworks")) + len(
+            diffs["common_summary"].get("components", {}).get("applications", [])),
+            "services": len(diffs["common_summary"].get("services", [])),
+            "dependencies": len(diffs["common_summary"].get("dependencies", []))}
 
 
 def get_diff(j1: FlatDicts, j2: FlatDicts, options: Options) -> Dict:
@@ -119,6 +115,7 @@ def load_json(json_file: str, options: Options) -> FlatDicts | BomDicts:
     try:
         with open(json_file, "r", encoding="utf-8") as f:
             data = json.load(f)
+            data = json.loads(json.dumps(data, sort_keys=True))
     except FileNotFoundError:
         logging.error("File not found: %s", json_file)
         sys.exit(1)
@@ -126,38 +123,30 @@ def load_json(json_file: str, options: Options) -> FlatDicts | BomDicts:
         logging.error("Invalid JSON: %s", json_file)
         sys.exit(1)
     if options.bom_diff:
-        data = sort_dict(data, ["url", "content", "ref", "name", "value"])
-        return BomDicts(options.allow_new_versions, json_file, data)
+        data = sort_dict_lists(data, ["url", "content", "ref", "name", "value"])
+        data = filter_dict(data, options).to_dict(unflat=True)
+        return BomDicts(options, json_file, data, {})
     return filter_dict(data, options)
 
 
-def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts, options: Options) -> Dict:
-    return {
-        "commons_summary": get_bom_commons(bom_1, bom_2),
-        "diff_summary": get_bom_diff(bom_1, bom_2, options)
+def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
+    if not deps:
+        return deps
+    for i in deps:
+        i["short_ref"] = match[0] if (match := regex.findall(i["ref"])) else i["ref"]
+    return deps
+
+
+def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Dict:
+    output = (bom_1.intersection(bom_2, "common_summary")).to_summary()
+    output |= {
+        "diff_summary": (bom_1 - bom_2).to_summary()
     }
+    output["diff_summary"] |= (bom_2 - bom_1).to_summary()
+    return output
 
 
-def populate_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Dict:
-    diff: Dict = {}
-    diff |= {
-        "components": {
-            "libraries": [
-                i.original_data
-                for i in bom_1.components
-                if i not in bom_2.components and i.component_type == "library"],
-            "frameworks": [
-                i.original_data for i in bom_1.components if
-                i not in bom_2.components and i.component_type == "framework"
-            ]
-        }
-    }
-    diff |= {"services": [i.original_data for i in bom_1.services if i not in bom_2.services]}
-    diff |= {"dependencies": [i.original_data for i in bom_1.dependencies if i not in bom_2.dependencies]}
-    return diff
-
-
-def report_results(status: int, diffs: Dict, options: Options) -> None:
+def report_results(status: int, diffs: Dict, j1: BomDicts | FlatDicts, options: Options) -> None:
     if status == 0:
         print("No differences found.")
     else:
@@ -165,14 +154,14 @@ def report_results(status: int, diffs: Dict, options: Options) -> None:
         handle_results(options.output, diffs)
     if options.bom_diff and options.output:
         report_file = options.output.replace(".json", "") + ".html"
-        export_html_report(report_file, diffs, options)
+        export_html_report(report_file, diffs, j1, options)  # type: ignore
 
 
-def sort_dict(result: Dict, sort_keys: List[str]) -> Dict:
+def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
     """Sorts a dictionary"""
     for k, v in result.items():
         if isinstance(v, dict):
-            result[k] = sort_dict(v, sort_keys)
+            result[k] = sort_dict_lists(v, sort_keys)
         elif isinstance(v, list) and len(v) >= 2:
             result[k] = sort_list(v, sort_keys)
         else:

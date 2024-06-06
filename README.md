@@ -1,7 +1,7 @@
 # custom-json-diff
 
 Comparing two JSON files presents an issue when the two files have certain fields which are 
-dynamically generated (e.g. timestamps), variable ordering, or other field which need to be 
+dynamically generated (e.g. timestamps), variable ordering, or other fields which need to be 
 excluded for one reason or another. Enter custom-json-diff, which allows you to specify fields to 
 ignore in the comparison and sorts all fields.
 
@@ -13,36 +13,48 @@ ignore in the comparison and sorts all fields.
 ## CLI Usage
 
 ```
-usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] (-c CONFIG | -x EXCLUDE [EXCLUDE ...] | -p {cdxgen,cdxgen-extended}) {bom-diff} ...
+usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] {bom-diff,json-diff} ...
 
 positional arguments:
-  {bom-diff}            subcommand help
+  {bom-diff,json-diff}  subcommand help
     bom-diff            compare CycloneDX BOMs
+    json-diff           compare two JSON files
 
 options:
   -h, --help            show this help message and exit
   -i INPUT INPUT, --input INPUT INPUT
-                        Two JSON files to compare.
+                        Two JSON files to compare - older file first.
   -o OUTPUT, --output OUTPUT
                         Export JSON of differences to this file.
   -c CONFIG, --config-file CONFIG
-                        Import TOML configuration file.
-  -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
-                        Exclude field(s) from comparison.
-  -p {cdxgen,cdxgen-extended}, --preset {cdxgen,cdxgen-extended}
-                        Preset to use
+                        Import TOML configuration file (overrides commandline options).
 ```
 
 bom-diff usage
 ```
-usage: cjd bom-diff [-h] [-a] [-r REPORT_TEMPLATE]
+usage: cjd bom-diff [-h] [--allow-new-versions] [--allow-new-data] [--components-only] [-r REPORT_TEMPLATE] [--include-extra INCLUDE [INCLUDE ...]]
 
 options:
   -h, --help            show this help message and exit
-  -a, --allow-new-versions
-                        Allow new versions in BOM comparison.
+  --allow-new-versions, -anv
+                        Allow newer versions in second BOM to pass.
+  --allow-new-data, -and
+                        Allow populated BOM values in newer BOM to pass against empty values in original BOM.
+  --components-only     Only compare components.
   -r REPORT_TEMPLATE, --report-template REPORT_TEMPLATE
                         Jinja2 template to use for report generation.
+  --include-extra INCLUDE [INCLUDE ...]
+                        Include properties/evidence/licenses/hashes in comparison (list which with space inbetween).
+```
+
+json-diff usage
+```
+usage: cjd json-diff [-h] [-x EXCLUDE [EXCLUDE ...]]
+
+options:
+  -h, --help            show this help message and exit
+  -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
+                        Exclude field(s) from comparison.
 ```
 
 ## Specifying fields to exclude
@@ -81,6 +93,52 @@ be, check out json-flatten, which is the package used for this function.
 >Note: In the context of BOM diffing, this list is only used for the metadata, not the components, 
 > services, or dependencies.
 
+## Bom Diff
+
+The bom-diff command compares CycloneDx BOM components, services, and dependencies, as well as data 
+outside of these parts. 
+
+Some fields are excluded from the component comparison by default but can be explicitly specified 
+for inclusion using `bom-diff --include-extra` and whichever field(s) you wish to include :
+- properties
+- evidence
+- licenses
+- hashes
+
+Default included fields:
+
+components (application, framework, and library types):
+- author
+- bom-ref
+- description
+- group
+- name
+- publisher
+- purl
+- scope
+- type
+- version
+
+services
+- name
+- endpoints
+- authenticated
+- x-trust-boundary
+
+dependencies
+- ref
+- dependsOn
+
+The --allow-new-versions option attempts to parse component versions and ascertain if a discrepancy 
+is attributable to an updated version. Dependency refs and dependents are compared with the version 
+string removed rather than checking for a newer version.
+
+The --allow-new-data option allows for empty fields in the original BOM not to be reported as a 
+difference when the data is populated in the second specified BOM. This option only applies to the 
+fields included by default.
+
+The --components-only option only analyzes components, not services, dependencies, or other data.
+
 ## Sorting
 
 custom-json-diff will sort the imported JSON alphabetically. If your JSON document contains arrays 
@@ -91,10 +149,13 @@ The first key located from the provided keys that is present in the object will 
 
 ```toml
 [settings]
-excluded_fields = ["serialNumber", "metadata.timestamp"]
+excluded_fields = []
 sort_keys = ["url", "content", "ref", "name", "value"]
 
-[bom_diff]
-allow_new_versions = false
-report_template = "my_template.j2"
+[bom_settings]
+allow_new_data = false
+allow_new_versions = true
+components_only = false
+include_extra = ["licenses", "properties", "hashes", "evidence"]
+report_template = "custom_json_diff/bom_diff_template.j2"
 ```
