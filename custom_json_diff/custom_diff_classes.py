@@ -49,88 +49,20 @@ class BomComponent:
             return True
         if self.options.allow_new_data:
             if self.options.bom_num == 2:
-                return self._check_for_empty_eq_other(other)
-            return self._check_for_empty_eq(other)
+                return check_for_empty_eq(other, self)
+            return check_for_empty_eq(self, other)
         return False
 
-    def _check_for_empty_eq(self, other):
-        if self.name and self.name != other.name:
-            return False
-        if self.group and self.group != other.group:
-            return False
-        if self.publisher and self.publisher != other.publisher:
-            return False
-        if self.bom_ref and self.bom_ref != other.bom_ref:
-            return False
-        if self.purl and self.purl != other.purl:
-            return False
-        if self.author and self.author != other.author:
-            return False
-        if self.component_type and self.component_type != other.component_type:
-            return False
-        if self.options.allow_new_versions and self.version and not self.version >= other.version:
-            return False
-        elif self.version and self.version != other.version:
-            return False
-        if self.properties and self.properties != other.properties:
-            return False
-        if self.evidence and self.evidence != other.evidence:
-            return False
-        if self.licenses and self.licenses != other.licenses:
-            return False
-        if self.hashes and self.hashes != other.hashes:
-            return False
-        if self.scope and self.scope != other.scope:
-            return False
-        return not self.description or self.description == other.description
-
-    def _check_for_empty_eq_other(self, other):
-        if other.name and other.name != self.name:
-            return False
-        if other.group and other.group != self.group:
-            return False
-        if other.publisher and other.publisher != self.publisher:
-            return False
-        if other.bom_ref and other.bom_ref != self.bom_ref:
-            return False
-        if other.purl and other.purl != self.purl:
-            return False
-        if other.author and other.author != self.author:
-            return False
-        if other.component_type and other.component_type != self.component_type:
-            return False
-        if other.options.allow_new_versions and other.version and not other.version >= self.version:
-            return False
-        elif other.version and other.version != self.version:
-            return False
-        if other.properties and other.properties != self.properties:
-            return False
-        if other.evidence and other.evidence != self.evidence:
-            return False
-        if other.licenses and other.licenses != self.licenses:
-            return False
-        if other.hashes and other.hashes != self.hashes:
-            return False
-        if other.scope and other.scope != self.scope:
-            return False
-        return not other.description or other.description == self.description
-
     def _check_list_eq(self, other):
-        if not self.options.allow_new_data:
-            return (self.properties == other.properties and self.evidence == other.evidence and
-                    self.hashes == other.hashes and self.licenses == other.licenses)
-        if self.properties and self.properties != other.properties:
-            return False
-        if self.evidence and self.evidence != other.evidence:
-            return False
-        if self.licenses and self.licenses != other.licenses:
-            return False
-        return not self.hashes or self.hashes == other.hashes
+        return (self.properties == other.properties and self.evidence == other.evidence and
+                self.hashes == other.hashes and self.licenses == other.licenses)
 
     def _check_new_versions(self, other):
         if self.options.bom_num == 1:
-            return self.search_key == other.search_key and self.version <= other.version and self._check_list_eq(other)
-        return self.search_key == other.search_key and self.version >= other.version and self._check_list_eq(other)
+            return (self.search_key == other.search_key and self.version <= other.version and
+                    self._check_list_eq(other))
+        return (self.search_key == other.search_key and self.version >= other.version and
+                self._check_list_eq(other))
 
 
 class BomService:
@@ -189,7 +121,15 @@ class BomDicts:
             services = [i for i in other.services if i not in self.services]
         if other.dependencies:
             dependencies = [i for i in other.dependencies if i not in self.dependencies]
-        new_bom_dict = BomDicts(other.options, other.filename, {}, {}, components, services, dependencies)
+        new_bom_dict = BomDicts(
+            other.options,
+            other.filename,
+            {},
+            {},
+            components,
+            services,
+            dependencies
+        )
         if new_bom_dict.filename == new_bom_dict.options.file_1:
             new_bom_dict.options.bom_num = 1
         new_bom_dict.data = data
@@ -205,30 +145,47 @@ class BomDicts:
             services = [i for i in other.services if i in self.services]
         if self.dependencies:
             dependencies = [i for i in other.dependencies if i in self.dependencies]
-        new_bom_dict = BomDicts(other.options, title or other.filename, {}, {}, components, services, dependencies)
+        new_bom_dict = BomDicts(
+            other.options,
+            title or other.filename,
+            {},
+            {},
+            components,
+            services,
+            dependencies
+        )
         new_bom_dict.data = self.data.intersection(other.data)
         return new_bom_dict
 
     def generate_counts(self) -> Dict:
-        return {"filename": self.filename, "components": len(self.components), "services": len(self.services), "dependencies": len(self.dependencies)}
+        return {
+            "filename": self.filename, "components": len(self.components),
+            "services": len(self.services), "dependencies": len(self.dependencies)
+        }
 
     def to_summary(self) -> Dict:
         summary: Dict = {self.filename: {}}
         if self.components:
-            summary[self.filename] = {"components": {
-                "libraries": [i.original_data for i in self.components if
-                    i.component_type == "library"],
-                "frameworks": [i.original_data for i in self.components if
-                    i.component_type == "framework"],
-                "applications": [i.original_data for i in self.components if
-                                 i.component_type == "application"], }}
+            summary[self.filename] = {
+                "components": {
+                    "libraries": [
+                    i.original_data for i in self.components if i.component_type == "library"],
+                    "frameworks": [
+                    i.original_data for i in self.components if i.component_type == "framework"],
+                    "applications": [i.original_data for i in self.components if
+                                 i.component_type == "application"],
+                    "other_types": [i.original_data for i in self.components if
+                                 i.component_type not in ("library", "framework", "application")],
+                }
+            }
         if not self.options.comp_only:
             if self.data:
                 summary[self.filename] |= {"misc_data": self.data.to_dict(unflat=True)}
             if self.services:
                 summary[self.filename] |= {"services": [i.original_data for i in self.services]}
             if self.dependencies:
-                summary[self.filename] |= {"dependencies": [i.original_data for i in self.dependencies]}
+                summary[self.filename] |= {"dependencies": [
+                    i.original_data for i in self.dependencies]}
         return summary
 
 
@@ -339,8 +296,44 @@ class Options:  # type: ignore
         self.svc_keys = list(set(self.svc_keys))
 
 
+def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
+    if bom_1.name and bom_1.name != bom_2.name:
+        return False
+    if bom_1.group and bom_1.group != bom_2.group:
+        return False
+    if bom_1.publisher and bom_1.publisher != bom_2.publisher:
+        return False
+    if bom_1.bom_ref and bom_1.bom_ref != bom_2.bom_ref:
+        return False
+    if bom_1.purl and bom_1.purl != bom_2.purl:
+        return False
+    if bom_1.author and bom_1.author != bom_2.author:
+        return False
+    if bom_1.component_type and bom_1.component_type != bom_2.component_type:
+        return False
+    if bom_1.options.allow_new_versions and bom_1.version and not bom_1.version >= bom_2.version:
+        return False
+    elif bom_1.version and bom_1.version != bom_2.version:
+        return False
+    if bom_1.properties and bom_1.properties != bom_2.properties:
+        return False
+    if bom_1.evidence and bom_1.evidence != bom_2.evidence:
+        return False
+    if bom_1.licenses and bom_1.licenses != bom_2.licenses:
+        return False
+    if bom_1.hashes and bom_1.hashes != bom_2.hashes:
+        return False
+    if bom_1.scope and bom_1.scope != bom_2.scope:
+        return False
+    return not bom_1.description or bom_1.description == bom_2.description
+
+
 def check_key(key: str, exclude_keys: Set[str] | List[str]) -> bool:
     return not any(key.startswith(k) for k in exclude_keys)
+
+
+def create_comp_key(comp: Dict, keys: List[str]) -> str:
+    return "|".join([str(comp.get(k, "")) for k in keys])
 
 
 def create_search_key(key: str, value: str) -> str:
@@ -349,11 +342,8 @@ def create_search_key(key: str, value: str) -> str:
     return combined_key
 
 
-def create_comp_key(comp: Dict, keys: List[str]) -> str:
-    return "|".join([str(comp.get(k, "")) for k in keys])
-
-
-def get_cdxgen_excludes(includes: List[str], comp_only: bool, allow_new_versions: bool, allow_new_data: bool) -> Tuple[List[str], Set[str], Set[str], bool]:
+def get_cdxgen_excludes(includes: List[str], comp_only: bool, allow_new_versions: bool,
+                        allow_new_data: bool) -> Tuple[List[str], Set[str], Set[str], bool]:
 
     excludes = {'metadata.timestamp': 'metadata.timestamp', 'serialNumber': 'serialNumber',
                 'metadata.tools.components.[].version': 'metadata.tools.components.[].version',

@@ -1,13 +1,29 @@
 import argparse
 
+from importlib.metadata import version
+
 from custom_json_diff.custom_diff import (compare_dicts, get_diff, perform_bom_diff,
                                           report_results)
 from custom_json_diff.custom_diff_classes import Options
 
 
-def build_args():
-    parser = argparse.ArgumentParser()
-    parser.set_defaults(bom_diff=False, allow_new_versions=False, report_template="", components_only=False, exclude=[], allow_new_data=False, include=[])
+def build_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="custom-json-diff")
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version="%(prog)s " + version("custom_json_diff")
+    )
+    parser.set_defaults(
+        bom_diff=False,
+        allow_new_versions=False,
+        report_template="",
+        components_only=False,
+        exclude=[],
+        allow_new_data=False,
+        include=[]
+    )
     parser.add_argument(
         "-i",
         "--input",
@@ -46,7 +62,7 @@ def build_args():
         "--allow-new-data",
         "-and",
         action="store_true",
-        help="Allow populated BOM values in newer BOM to pass against empty values in original BOM.",
+        help="Allow populated values in newer BOM to pass against empty values in original BOM.",
         dest="allow_new_data",
         default=False,
     )
@@ -68,7 +84,7 @@ def build_args():
     parser_bom_diff.add_argument(
         "--include-extra",
         action="store",
-        help="Include properties/evidence/licenses/hashes in comparison (list which with space inbetween).",
+        help="Include properties/evidence/licenses/hashes (list which with space inbetween).",
         default=[],
         dest="include",
         nargs="+",

@@ -43,11 +43,11 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, options: Options
     jinja_tmpl = jinja_env.from_string(template)
     purl_regex = re.compile(r"[^/]+@[^?\s]+")
     diffs["diff_summary"][options.file_1]["dependencies"] = parse_purls(
-        diffs["diff_summary"][options.file_1]["dependencies"], purl_regex)
+        diffs["diff_summary"][options.file_1].get("dependencies", []), purl_regex)
     diffs["diff_summary"][options.file_2]["dependencies"] = parse_purls(
-        diffs["diff_summary"][options.file_2]["dependencies"], purl_regex)
+        diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
-        diffs["common_summary"]["dependencies"], purl_regex)
+        diffs["common_summary"].get("dependencies", []), purl_regex)
     stats_summary = calculate_pcts(generate_diff_counts(diffs), j1.generate_counts())
     report_result = jinja_tmpl.render(
         common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
@@ -55,12 +55,15 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, options: Options
         common_services=diffs["common_summary"].get("services", []),
         common_deps=diffs["common_summary"].get("dependencies", []),
         common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
+        common_other=diffs["common_summary"].get("components", {}).get("other_types", []),
         diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("libraries", []),
         diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("libraries", []),
         diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("frameworks", []),
         diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("frameworks", []),
         diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("applications", []),
         diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("applications", []),
+        diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("other_types", []),
+        diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("other_types", []),
         diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
         diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
         diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
@@ -87,11 +90,13 @@ def filter_dict(data: Dict, options: Options) -> FlatDicts:
 
 
 def generate_diff_counts(diffs) -> Dict:
-    return {"components": len(diffs["common_summary"].get("components", {}).get("libraries", [])) + len(
-        diffs["common_summary"].get("components", {}).get("frameworks")) + len(
-            diffs["common_summary"].get("components", {}).get("applications", [])),
-            "services": len(diffs["common_summary"].get("services", [])),
-            "dependencies": len(diffs["common_summary"].get("dependencies", []))}
+    return {"components": len(
+        diffs["common_summary"].get("components", {}).get("libraries", [])) + len(
+        diffs["common_summary"].get("components", {}).get("frameworks", [])) + len(
+        diffs["common_summary"].get("components", {}).get("applications", [])) + len(
+        diffs["common_summary"].get("components", {}).get("other_types", [])),
+        "services": len(diffs["common_summary"].get("services", [])),
+        "dependencies": len(diffs["common_summary"].get("dependencies", []))}
 
 
 def get_diff(j1: FlatDicts, j2: FlatDicts, options: Options) -> Dict:
