@@ -13,7 +13,7 @@ ignore in the comparison and sorts all fields.
 ## CLI Usage
 
 ```
-usage: cjd [-h] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] {bom-diff,json-diff} ...
+usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] {bom-diff,json-diff} ...
 
 positional arguments:
   {bom-diff,json-diff}  subcommand help
@@ -22,12 +22,14 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
   -i INPUT INPUT, --input INPUT INPUT
                         Two JSON files to compare - older file first.
   -o OUTPUT, --output OUTPUT
                         Export JSON of differences to this file.
   -c CONFIG, --config-file CONFIG
                         Import TOML configuration file (overrides commandline options).
+
 ```
 
 bom-diff usage
@@ -107,7 +109,7 @@ for inclusion using `bom-diff --include-extra` and whichever field(s) you wish t
 
 Default included fields:
 
-components (application, framework, and library types):
+components:
 - author
 - bom-ref
 - description
