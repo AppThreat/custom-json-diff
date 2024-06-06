@@ -43,11 +43,11 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, options: Options
     jinja_tmpl = jinja_env.from_string(template)
     purl_regex = re.compile(r"[^/]+@[^?\s]+")
     diffs["diff_summary"][options.file_1]["dependencies"] = parse_purls(
-        diffs["diff_summary"][options.file_1]["dependencies"], purl_regex)
+        diffs["diff_summary"][options.file_1].get("dependencies", []), purl_regex)
     diffs["diff_summary"][options.file_2]["dependencies"] = parse_purls(
-        diffs["diff_summary"][options.file_2]["dependencies"], purl_regex)
+        diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
-        diffs["common_summary"]["dependencies"], purl_regex)
+        diffs["common_summary"].get("dependencies", []), purl_regex)
     stats_summary = calculate_pcts(generate_diff_counts(diffs), j1.generate_counts())
     report_result = jinja_tmpl.render(
         common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
