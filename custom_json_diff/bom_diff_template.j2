@@ -14,14 +14,57 @@
             display: grid;
             grid-template-columns: 5% 90% 5%;
         }
+
+        .table_summary2 {
+            display: grid;
+            grid-template-columns: 75% 20% 5%;
+        }
+
+        .attribute {
+            display: grid;
+            grid-template-columns: 5% 15% 70% 10%;
+        }
+
+        .attribute > div {
+            text-size-adjust: 80%;
+        }
     </style>
 </head>
 <body>
+<div class="table_summary2">
+    <div></div>
+    <div>
+        <table style="width: 100%;">
+            <tr>
+                <th colspan="2" style="text-align: center; background-color: #d7ddde">Overall
+                    Summary
+                </th>
+            </tr>
+            {% if not comp_only %}
+                {% for item in stats %}
+                    <tr>
+                        <td>{{ item[0] }}</td>
+                        <td style="text-align: right">{{ item[1] }}</td>
+
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            {% if comp_only %}
+                <tr>
+                    <td>{{ stats[0][0] }}</td>
+                    <td style="text-align: right">{{ stats[0][1] }}</td>
+
+                </tr>
+            {% endif %}
+        </table>
+
+    </div>
+</div>
 <div><h1 style="text-align:center;">BOM Diff Summary</h1></div>
 <div class="table_summary">
     <div></div>
     <div>
-        <table style="width: 100%">
+        <table class="master_table" style="width: 100%">
             <tr>
                 <th colspan="3" style="text-align: center; background-color: #d7ddde">Component
                     Diff
@@ -38,11 +81,12 @@
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>purl: {{ item['purl'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["hashes", "licenses", "properties", "evidence"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
@@ -50,11 +94,11 @@
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>purl: {{ item['purl'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
@@ -65,11 +109,11 @@
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>purl: {{ item['purl'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
@@ -77,74 +121,106 @@
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>purl: {{ item['purl'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
             </tr>
-            <tr>
-                <th>services</th>
-                <td>{% for item in diff_services_1 %}
+                    <tr>
+                <th>applications</th>
+                <td>{% for item in diff_apps_1 %}
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
-                <td>{% for item in diff_services_2 %}
+                <td>{% for item in diff_apps_2 %}
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
             </tr>
-            <tr>
-                <th>dependencies</th>
-                <td>{% for item in diff_deps_1 %}
-                    <details>
-                        <summary>{{ item['short_ref'] }}</summary>
-                        <ul>
-                            <li>ref: {{ item['ref'] }}</li>
-                            <li>dependencies:
-                                                        <ul>
-                            {% for dep in item['dependsOn'] %}
-                                <li>{{ dep }}</li>
-                            {% endfor %}
-                        </ul>
-                            </li>
-                        </ul>
+            {% if not comp_only %}
+                <tr>
+                    <th>services</th>
+                    <td>{% for item in diff_services_1 %}
+                        <details>
+                            <summary>{{ item['name'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                    <td>{% for item in diff_services_2 %}
+                        <details>
+                            <summary>{{ item['name'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+                <tr>
+                    <th>dependencies</th>
+                    <td>{% for item in diff_deps_1 %}
+                        <details>
+                            <summary>{{ item['short_ref'] }}</summary>
+                            <ul>
+                                <li>ref: {{ item['ref'] }}</li>
+                                <li>dependencies:
+                                    <ul>
+                                        {% for dep in item['dependsOn'] %}
+                                            <li>{{ dep }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            </ul>
 
-                    </details>
-                {% endfor %}</td>
-                <td>{% for item in diff_deps_2 %}
-                    <details>
-                        <summary>{{ item['short_ref'] }}</summary>
-                    <ul>
-                        <li>ref: {{ item['ref'] }}</li>
-                        <li>dependencies:
-                                                <ul>
-                            {% for dep in item['dependsOn'] %}
-                                <li>{{ dep }}</li>
-                            {% endfor %}
-                        </ul></li>
-                    </ul>
+                        </details>
+                    {% endfor %}</td>
+                    <td>{% for item in diff_deps_2 %}
+                        <details>
+                            <summary>{{ item['short_ref'] }}</summary>
+                            <ul>
+                                <li>ref: {{ item['ref'] }}</li>
+                                <li>dependencies:
+                                    <ul>
+                                        {% for dep in item['dependsOn'] %}
+                                            <li>{{ dep }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            </ul>
 
-                    </details>
-                {% endfor %}</td>
-            </tr>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
         </table>
     </div>
     <div></div>
@@ -153,7 +229,7 @@
 <div class="table_summary">
     <div></div>
     <div>
-        <table style="width: 100%">
+        <table class="master_table" style="width: 100%">
             <tr>
                 <th colspan="4" style="text-align: center; background-color: #d7ddde">Common
                     Components
@@ -165,59 +241,81 @@
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>purl: {{ item['purl'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
+            </tr>
+                    <tr>
                 <th style="width: 8%">frameworks</th>
                 <td style="width: 41%">{% for item in common_frameworks %}
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>purl: {{ item['purl'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
+                            {% endfor %}
                         </ul>
                     </details>
                 {% endfor %}</td>
             </tr>
-            <tr>
-                <th style="width: 8%">services</th>
-                <td style="width: 41%">{% for item in common_lib %}
+                    <tr>
+                            <th style="width: 8%">applications</th>
+                <td style="width: 41%">{% for item in common_apps %}
                     <details>
                         <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                         <ul>
-                            <li>name: {{ item['name'] }}</li>
-                            <li>version: {{ item['version'] }}</li>
-                            <li>group: {{ item['group'] }}</li>
-                            <li>bom-ref: {{ item['bom-ref'] }}</li>
-                        </ul>
-                    </details>
-                {% endfor %}</td>
-                <th style="width: 8%">dependencies</th>
-                <td style="width: 41%">                {% for item in common_deps %}
-                    <details>
-                        <summary>{{ item['short_ref'] }}</summary>
-                        <ul>
-                            <li>ref: {{ item['ref'] }}</li>
-                            <li>dependencies:
-                                                        <ul>
-                            {% for dep in item['dependsOn'] %}
-                                <li>{{ dep }}</li>
+                            {% for key, value in item|items %}
+                                {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                {% endif %}
                             {% endfor %}
                         </ul>
-                            </li>
-                        </ul>
-
                     </details>
                 {% endfor %}</td>
             </tr>
+            {% if not comp_only %}
+                <tr>
+                    <th style="width: 8%">services</th>
+                    <td style="width: 41%">{% for item in common_services %}
+                        <details>
+                            <summary>{{ item['name'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+                                <tr>
+                    <th style="width: 8%">dependencies</th>
+                    <td style="width: 41%">                {% for item in common_deps %}
+                        <details>
+                            <summary>{{ item['short_ref'] }}</summary>
+                            <ul>
+                                <li>ref: {{ item['ref'] }}</li>
+                                <li>dependencies:
+                                    <ul>
+                                        {% for dep in item['dependsOn'] %}
+                                            <li>{{ dep }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            </ul>
+
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
         </table>
     </div>
     <div></div>

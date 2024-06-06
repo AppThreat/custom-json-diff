@@ -1,7 +1,10 @@
 [settings]
-excluded_fields = ["serialNumber", "metadata.timestamp"]
+excluded_fields = []
 sort_keys = ["url", "content", "ref", "name", "value"]
 
 [bom_settings]
+allow_new_data = false
 allow_new_versions = true
+components_only = false
+include_extra = ["licenses", "properties", "hashes", "evidence"]
 report_template = "custom_json_diff/bom_diff_template.j2"
