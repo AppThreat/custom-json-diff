@@ -438,7 +438,7 @@ def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, Li
 def set_version(version: str, allow_new_versions: bool = False) -> semver.Version | str:
     try:
         if allow_new_versions and version:
-            version = version.rstrip(".RELEASE")
+            version = version.lstrip("v").rstrip(".RELEASE")
             return semver.Version.parse(version, True)
     except ValueError:
         logger.debug("Could not parse version: %s", version)
