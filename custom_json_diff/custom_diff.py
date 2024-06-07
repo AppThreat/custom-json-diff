@@ -62,6 +62,10 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
     diffs["common_summary"]["dependencies"] = parse_purls(
         diffs["common_summary"].get("dependencies", []), purl_regex)
     stats_summary = calculate_pcts(generate_diff_counts(diffs, j1.options.file_2), j1, j2)
+    metadata_results = bool(
+        diffs["diff_summary"][options.file_1].get("misc_data", {}) or
+        diffs["diff_summary"][options.file_2].get("misc_data", {})
+    )
     report_result = jinja_tmpl.render(
         common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
         common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
@@ -84,7 +88,8 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
         bom_1=options.file_1,
         bom_2=options.file_2,
         stats=stats_summary,
-        comp_only=options.comp_only
+        comp_only=options.comp_only,
+        metadata=metadata_results,
     )
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(report_result)

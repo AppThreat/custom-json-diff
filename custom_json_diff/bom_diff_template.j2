@@ -39,6 +39,16 @@
 
                 </tr>
             {% endfor %}
+            <tr>
+                <td>Metadata matched</td>
+                {% if metadata %}
+                    <td style="text-align: right">✖</td>
+                {% endif %}
+                {% if not metadata %}
+                    <td style="text-align: right">✔</td>
+                {% endif %}
+
+            </tr>
         </table>
 
     </div>
@@ -264,7 +274,7 @@
             </tr>
             {% if not (common_apps or common_frameworks or common_lib or common_other) %}
                 <tr>
-                    <td colspan="2" style="text-align: center">No commonalities found.</td>
+                    <td colspan="2" style="text-align: center">No commonalities.</td>
                 </tr>
             {% endif %}
             {% if common_apps %}
