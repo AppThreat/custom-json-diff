@@ -1,6 +1,6 @@
 [project]
 name = "custom-json-diff"
-version = "1.0.0"
+version = "1.1.0"
 description = "Custom JSON and CycloneDx BOM diffing and comparison tool."
 authors = [
   { name = "Caroline Russell", email = "caroline@appthreat.dev" },

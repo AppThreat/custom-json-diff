@@ -13,12 +13,11 @@ ignore in the comparison and sorts all fields.
 ## CLI Usage
 
 ```
-usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] {bom-diff,json-diff} ...
+usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE [EXCLUDE ...]] {bom-diff} ...
 
 positional arguments:
-  {bom-diff,json-diff}  subcommand help
+  {bom-diff}            subcommand help
     bom-diff            compare CycloneDX BOMs
-    json-diff           compare two JSON files
 
 options:
   -h, --help            show this help message and exit
@@ -29,6 +28,8 @@ options:
                         Export JSON of differences to this file.
   -c CONFIG, --config-file CONFIG
                         Import TOML configuration file (overrides commandline options).
+  -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
+                        Exclude field(s) from comparison.
 
 ```
 
@@ -49,52 +50,6 @@ options:
                         Include properties/evidence/licenses/hashes in comparison (list which with space inbetween).
 ```
 
-json-diff usage
-```
-usage: cjd json-diff [-h] [-x EXCLUDE [EXCLUDE ...]]
-
-options:
-  -h, --help            show this help message and exit
-  -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
-                        Exclude field(s) from comparison.
-```
-
-## Specifying fields to exclude
-
-To exclude fields from comparison, use the `-x` or `--exclude` flag and specify the field name(s) 
-to exclude. The json will be flattened, so fields are specified using dot notation. For example:
-
-```json
-{
-    "field1": {
-        "field2": "value", 
-        "field3": [
-            {"a": "val1", "b": "val2"}, 
-            {"a": "val3", "b": "val4"}
-        ]
-    }
-}
-```
-
-is flattened to:
-```json
-{
-    "field1.field2": "value",
-    "field1.field3.[0].a": "val1",
-    "field1.field3.[0].b": "val2",
-    "field1.field3.[1].a": "val3",
-    "field1.field3.[1].b": "val4"
-}
-```
-
-To exclude field2, you would specify `field1.field2`. To exclude the `a` field in the array of 
-objects, you would specify `field1.field3.[].a` (do NOT include the array index, just do `[]`). 
-Multiple fields may be specified separated by a space. To better understand what your fields should
-be, check out json-flatten, which is the package used for this function.
-
->Note: In the context of BOM diffing, this list is only used for the metadata, not the components, 
-> services, or dependencies.
-
 ## Bom Diff
 
 The bom-diff command compares CycloneDx BOM components, services, and dependencies, as well as data 
@@ -106,6 +61,10 @@ for inclusion using `bom-diff --include-extra` and whichever field(s) you wish t
 - evidence
 - licenses
 - hashes
+- externalReferences
+
+You can use the -x --exclude switch before the bom-diff command to exclude any of these 
+(see [Specifying fields to exclude](#specifying-fields-to-exclude) ).
 
 Default included fields:
 
@@ -141,6 +100,39 @@ fields included by default.
 
 The --components-only option only analyzes components, not services, dependencies, or other data.
 
+## Specifying fields to exclude
+
+To exclude fields from comparison, use the `-x` or `--exclude` flag and specify the field name(s) 
+to exclude. The json will be flattened, so fields are specified using dot notation. For example:
+
+```json
+{
+    "field1": {
+        "field2": "value", 
+        "field3": [
+            {"a": "val1", "b": "val2"}, 
+            {"a": "val3", "b": "val4"}
+        ]
+    }
+}
+```
+
+is flattened to:
+```json
+{
+    "field1.field2": "value",
+    "field1.field3.[0].a": "val1",
+    "field1.field3.[0].b": "val2",
+    "field1.field3.[1].a": "val3",
+    "field1.field3.[1].b": "val4"
+}
+```
+
+To exclude field2, you would specify `field1.field2`. To exclude the `a` field in the array of 
+objects, you would specify `field1.field3.[].a` (do NOT include the array index, just do `[]`). 
+Multiple fields may be specified separated by a space. To better understand what your fields should
+be, check out json-flatten, which is the package used for this function.
+
 ## Sorting
 
 custom-json-diff will sort the imported JSON alphabetically. If your JSON document contains arrays 
@@ -158,6 +150,6 @@ sort_keys = ["url", "content", "ref", "name", "value"]
 allow_new_data = false
 allow_new_versions = true
 components_only = false
-include_extra = ["licenses", "properties", "hashes", "evidence"]
+include_extra = ["licenses", "properties", "hashes", "evidence", "externalReferences"]
 report_template = "custom_json_diff/bom_diff_template.j2"
 ```
