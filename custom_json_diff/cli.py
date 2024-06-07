@@ -84,19 +84,15 @@ def build_args() -> argparse.Namespace:
     parser_bom_diff.add_argument(
         "--include-extra",
         action="store",
-        help="Include properties/evidence/licenses/hashes/externalReferences (list which with space inbetween).",
-        default=[],
+        help="Include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
         dest="include",
-        nargs="+",
     )
     parser.add_argument(
         "-x",
         "--exclude",
         action="store",
         help="Exclude field(s) from comparison.",
-        default=[],
         dest="exclude",
-        nargs="+",
     )
 
     return parser.parse_args()
@@ -104,6 +100,10 @@ def build_args() -> argparse.Namespace:
 
 def main():
     args = build_args()
+    if args.exclude:
+        args.exclude = args.exclude.split(",")
+    if args.include:
+        args.include = args.include.split(",")
     options = Options(
         allow_new_versions=args.allow_new_versions,
         allow_new_data=args.allow_new_data,
