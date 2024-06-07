@@ -15,7 +15,7 @@ ignore in the comparison and sorts all fields.
 Note, you may use `cjd` rather than `custom-json-diff` to run.
 
 ```
-usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE] {bom-diff} ...
+usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE] [--debug] {bom-diff} ...
 
 positional arguments:
   {bom-diff}            subcommand help
@@ -32,6 +32,7 @@ options:
                         Import TOML configuration file (overrides commandline options).
   -x EXCLUDE, --exclude EXCLUDE
                         Exclude field(s) from comparison.
+  --debug               Print debug messages.
 
 ```
 

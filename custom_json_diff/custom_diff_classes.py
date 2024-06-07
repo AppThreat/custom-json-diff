@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import re
 import sys
@@ -10,7 +9,7 @@ import toml
 from json_flatten import unflatten  # type: ignore
 
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BomComponent:
@@ -32,13 +31,15 @@ class BomComponent:
         self.hashes = comp.get("hashes", [])
         self.scope = comp.get("scope", [])
         self.description = comp.get("description", "")
+        self.external_references = comp.get("externalReferences", [])
 
     def __eq__(self, other):
+        if self.options.allow_new_versions and self.options.allow_new_data:
+            return self._advanced_eq(other) and self._check_new_versions(other)
+        if self.options.allow_new_versions:
+            return self._check_new_versions(other) and self._check_list_eq(other) and self.search_key == other.search_key
         if self.options.allow_new_data:
             return self._advanced_eq(other)
-        if self.options.allow_new_versions:
-            return self._check_new_versions(other)
-
         else:
             return self.search_key == other.search_key and self._check_list_eq(other)
 
@@ -60,10 +61,8 @@ class BomComponent:
 
     def _check_new_versions(self, other):
         if self.options.bom_num == 1:
-            return (self.search_key == other.search_key and self.version <= other.version and
-                    self._check_list_eq(other))
-        return (self.search_key == other.search_key and self.version >= other.version and
-                self._check_list_eq(other))
+            return self.version <= other.version
+        return self.version >= other.version
 
 
 class BomService:
@@ -304,17 +303,9 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
         return False
     if bom_1.publisher and bom_1.publisher != bom_2.publisher:
         return False
-    if bom_1.bom_ref and bom_1.bom_ref != bom_2.bom_ref:
-        return False
-    if bom_1.purl and bom_1.purl != bom_2.purl:
-        return False
     if bom_1.author and bom_1.author != bom_2.author:
         return False
     if bom_1.component_type and bom_1.component_type != bom_2.component_type:
-        return False
-    if bom_1.options.allow_new_versions and bom_1.version and not bom_1.version >= bom_2.version:
-        return False
-    elif bom_1.version and bom_1.version != bom_2.version:
         return False
     if bom_1.properties and bom_1.properties != bom_2.properties:
         return False
@@ -322,10 +313,19 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
         return False
     if bom_1.licenses and bom_1.licenses != bom_2.licenses:
         return False
-    if bom_1.hashes and bom_1.hashes != bom_2.hashes:
-        return False
     if bom_1.scope and bom_1.scope != bom_2.scope:
         return False
+    if bom_1.external_references and bom_1.external_references != bom_2.external_references:
+        return False
+    if not bom_1.options.allow_new_versions:
+        if bom_1.version and bom_1.version != bom_2.version:
+            return False
+        if bom_1.bom_ref and bom_1.bom_ref != bom_2.bom_ref:
+            return False
+        if bom_1.purl and bom_1.purl != bom_2.purl:
+            return False
+        if bom_1.hashes and bom_1.hashes != bom_2.hashes:
+            return False
     return not bom_1.description or bom_1.description == bom_2.description
 
 
@@ -402,7 +402,7 @@ def import_config(config: str) -> Dict:
         try:
             toml_data = toml.load(f)
         except toml.TomlDecodeError:
-            logging.error("Invalid TOML.")
+            logger.error("Invalid TOML.")
             sys.exit(1)
     return toml_data
 
@@ -436,10 +436,10 @@ def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, Li
 
 
 def set_version(version: str, allow_new_versions: bool = False) -> semver.Version | str:
-    with contextlib.suppress(ValueError):
+    try:
         if allow_new_versions and version:
-            version = version.rstrip(".RELEASE")
+            version = version.lstrip("v").rstrip(".RELEASE")
             return semver.Version.parse(version, True)
-    # except ValueError:
-    #     log.warning("Could not parse version: %s", version)
+    except ValueError:
+        logger.debug("Could not parse version: %s", version)
     return version
