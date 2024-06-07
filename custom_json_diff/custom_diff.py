@@ -27,7 +27,7 @@ def calculate_pcts(diff_stats: Dict, j1: BomDicts, j2: BomDicts) -> List[list[st
         [f"BOM 2 {key} not matched: ", f"{j2_counts[key] - value}/{j2_counts[key]}"]
         for key, value in diff_stats["common"].items()
     ])
-    return [i for i in result if i[1] not in ["0", "0/0"]]
+    return [i for i in result if not i[1].startswith("0")]
 
 
 def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
