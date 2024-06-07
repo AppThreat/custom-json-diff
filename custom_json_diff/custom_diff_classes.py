@@ -9,6 +9,7 @@ import semver
 import toml
 from json_flatten import unflatten  # type: ignore
 
+
 log = logging.getLogger(__name__)
 
 
@@ -343,31 +344,31 @@ def create_search_key(key: str, value: str) -> str:
 
 
 def get_cdxgen_excludes(includes: List[str], comp_only: bool, allow_new_versions: bool,
-                        allow_new_data: bool) -> Tuple[List[str], Set[str], Set[str], bool]:
+                        allow_new_data: bool) -> Tuple[List[str], List[str], List[str], bool]:
 
     excludes = {'metadata.timestamp': 'metadata.timestamp', 'serialNumber': 'serialNumber',
                 'metadata.tools.components.[].version': 'metadata.tools.components.[].version',
                 'metadata.tools.components.[].purl': 'metadata.tools.components.[].purl',
                 'metadata.tools.components.[].bom-ref': 'metadata.tools.components.[].bom-ref',
                 'properties': 'components.[].properties', 'evidence': 'components.[].evidence',
-                'licenses': 'components.[].licenses', 'hashes': 'components.[].hashes'}
+                'licenses': 'components.[].licenses', 'hashes': 'components.[].hashes',
+                'externalReferences': 'components.[].externalReferences',
+                'externalreferences': 'components.[].externalReferences'}
     if comp_only:
         excludes |= {'services': 'services', 'dependencies': 'dependencies'}
     if allow_new_data:
-        component_keys = set()
-        service_keys = set()
+        component_keys = []
+        service_keys = []
     else:
-        component_keys = {'name', 'author', 'publisher', 'group', 'type', 'scope', 'description'}
-        service_keys = {'name', 'authenticated', 'x-trust-boundary', 'endpoints'}
+        component_keys = ['name', 'author', 'publisher', 'group', 'type', 'scope', 'description']
+        service_keys = ['name', 'authenticated', 'x-trust-boundary', 'endpoints']
         if not allow_new_versions:
-            component_keys.add('version')
-            component_keys.add('bom-ref')
-            component_keys.add('purl')
+            component_keys.extend([i for i in ('version', 'purl', 'bom-ref', 'version') if i not in excludes])
 
     return (
         [v for k, v in excludes.items() if k not in includes],
-        component_keys,
-        service_keys,
+        [v for v in component_keys if v not in excludes],
+        [v for v in service_keys if v not in excludes],
         allow_new_data,
     )
 

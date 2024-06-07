@@ -100,18 +100,16 @@ def build_args() -> argparse.Namespace:
 
 def main():
     args = build_args()
-    if args.exclude:
-        args.exclude = args.exclude.split(",")
-    if args.include:
-        args.include = args.include.split(",")
+    exclude = args.exclude.split(",") if args.exclude else []
+    include = args.include.split(",") if args.include else []
     options = Options(
         allow_new_versions=args.allow_new_versions,
         allow_new_data=args.allow_new_data,
         config=args.config,
         comp_only=args.components_only,
         bom_diff=args.bom_diff,
-        include=args.include,
-        exclude=args.exclude,
+        include=include,
+        exclude=exclude,
         file_1=args.input[0],
         file_2=args.input[1],
         output=args.output,
@@ -123,7 +121,7 @@ def main():
         result_summary = perform_bom_diff(j1, j2)
     else:
         result_summary = get_diff(j1, j2, options)
-    report_results(result, result_summary, j1, options)
+    report_results(result, result_summary, options, j1, j2)
 
 
 if __name__ == "__main__":
