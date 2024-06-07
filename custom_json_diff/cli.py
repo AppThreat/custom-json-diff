@@ -1,10 +1,14 @@
 import argparse
+import logging
 
 from importlib.metadata import version
 
 from custom_json_diff.custom_diff import (compare_dicts, get_diff, perform_bom_diff,
                                           report_results)
 from custom_json_diff.custom_diff_classes import Options
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_args() -> argparse.Namespace:
@@ -94,12 +98,20 @@ def build_args() -> argparse.Namespace:
         help="Exclude field(s) from comparison.",
         dest="exclude",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print debug messages.",
+        dest="debug",
+    )
 
     return parser.parse_args()
 
 
 def main():
     args = build_args()
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
     exclude = args.exclude.split(",") if args.exclude else []
     include = args.include.split(",") if args.include else []
     options = Options(

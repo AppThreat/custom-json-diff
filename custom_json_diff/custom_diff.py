@@ -12,6 +12,9 @@ from json_flatten import flatten, unflatten  # type: ignore
 from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts, Options
 
 
+logger = logging.getLogger(__name__)
+
+
 def calculate_pcts(diff_stats: Dict, j1: BomDicts, j2: BomDicts) -> List[list[str]]:
     j1_counts = j1.generate_counts()
     j2_counts = j2.generate_counts()
@@ -93,13 +96,13 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
     )
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(report_result)
-    print(f"HTML report generated: {outfile}")
+    logger.debug(f"HTML report generated: {outfile}")
 
 
 def export_results(outfile: str, diffs: Dict) -> None:
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(json.dumps(diffs, indent=2))
-    print(f"JSON report generated: {outfile}")
+    logger.debug(f"JSON report generated: {outfile}")
 
 
 def filter_dict(data: Dict, options: Options) -> FlatDicts:
@@ -140,8 +143,6 @@ def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
 def handle_results(outfile: str, diffs: Dict) -> None:
     if outfile:
         export_results(outfile, diffs)
-    if not outfile:
-        print(json.dumps(diffs, indent=2))
 
 
 def load_json(json_file: str, options: Options) -> FlatDicts | BomDicts:
@@ -150,10 +151,10 @@ def load_json(json_file: str, options: Options) -> FlatDicts | BomDicts:
             data = json.load(f)
             data = json.loads(json.dumps(data, sort_keys=True))
     except FileNotFoundError:
-        logging.error("File not found: %s", json_file)
+        logger.error("File not found: %s", json_file)
         sys.exit(1)
     except json.JSONDecodeError:
-        logging.error("Invalid JSON: %s", json_file)
+        logger.error("Invalid JSON: %s", json_file)
         sys.exit(1)
     if options.bom_diff:
         data = sort_dict_lists(data, ["url", "content", "ref", "name", "value"])
@@ -185,7 +186,10 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts | No
     else:
         print("Differences found.")
         handle_results(options.output, diffs)
-    if options.bom_diff and options.output:
+    if not options.output:
+        logger.warning("No output file specified. No reports generated.")
+        return
+    elif options.bom_diff:
         report_file = options.output.replace(".json", "") + ".html"
         export_html_report(report_file, diffs, j1, j2, options)  # type: ignore
 
@@ -207,7 +211,7 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     if isinstance(lst[0], dict):
         if sort_key := get_sort_key(lst[0], sort_keys):
             return sorted(lst, key=lambda x: x[sort_key])
-        logging.debug("No key(s) specified for sorting. Cannot sort list of dictionaries.")
+        logger.debug("No key(s) specified for sorting. Cannot sort list of dictionaries.")
         return lst
     if isinstance(lst[0], (str, int)):
         lst.sort()

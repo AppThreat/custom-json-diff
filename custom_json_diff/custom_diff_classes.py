@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import re
 import sys
@@ -10,7 +9,7 @@ import toml
 from json_flatten import unflatten  # type: ignore
 
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BomComponent:
@@ -316,6 +315,8 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
         return False
     if bom_1.scope and bom_1.scope != bom_2.scope:
         return False
+    if bom_1.external_references and bom_1.external_references != bom_2.external_references:
+        return False
     if not bom_1.options.allow_new_versions:
         if bom_1.version and bom_1.version != bom_2.version:
             return False
@@ -325,8 +326,6 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
             return False
         if bom_1.hashes and bom_1.hashes != bom_2.hashes:
             return False
-    if bom_1.external_references and bom_1.external_references != bom_2.external_references:
-        return False
     return not bom_1.description or bom_1.description == bom_2.description
 
 
@@ -403,7 +402,7 @@ def import_config(config: str) -> Dict:
         try:
             toml_data = toml.load(f)
         except toml.TomlDecodeError:
-            logging.error("Invalid TOML.")
+            logger.error("Invalid TOML.")
             sys.exit(1)
     return toml_data
 
@@ -437,10 +436,10 @@ def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, Li
 
 
 def set_version(version: str, allow_new_versions: bool = False) -> semver.Version | str:
-    with contextlib.suppress(ValueError):
+    try:
         if allow_new_versions and version:
             version = version.rstrip(".RELEASE")
             return semver.Version.parse(version, True)
-    # except ValueError:
-    #     log.warning("Could not parse version: %s", version)
+    except ValueError:
+        logger.debug("Could not parse version: %s", version)
     return version
