@@ -84,13 +84,12 @@ def build_args() -> argparse.Namespace:
     parser_bom_diff.add_argument(
         "--include-extra",
         action="store",
-        help="Include properties/evidence/licenses/hashes (list which with space inbetween).",
+        help="Include properties/evidence/licenses/hashes/externalReferences (list which with space inbetween).",
         default=[],
         dest="include",
         nargs="+",
     )
-    parser_json_diff = subparsers.add_parser("json-diff", help="compare two JSON files")
-    parser_json_diff.add_argument(
+    parser.add_argument(
         "-x",
         "--exclude",
         action="store",

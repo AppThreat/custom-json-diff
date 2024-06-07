@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import sys
+from copy import deepcopy
 from typing import Dict, List, Set, Tuple
 
 from jinja2 import Environment
@@ -23,8 +24,9 @@ def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
 
 
 def compare_dicts(options: Options) -> Tuple[int, FlatDicts | BomDicts, FlatDicts | BomDicts]:
+    options2 = deepcopy(options)
     json_1_data = load_json(options.file_1, options)
-    json_2_data = load_json(options.file_2, options)
+    json_2_data = load_json(options.file_2, options2)
     if json_1_data == json_2_data:
         return 0, json_1_data, json_2_data
     else:
