@@ -12,11 +12,22 @@ from json_flatten import flatten, unflatten  # type: ignore
 from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts, Options
 
 
-def calculate_pcts(diff_stats: Dict, j1_counts: Dict) -> List[list[str]]:
-    return [
-        [f"Common {key} found: ", f"{value}/{j1_counts[key]}"]
-        for key, value in diff_stats.items()
+def calculate_pcts(diff_stats: Dict, j1: BomDicts, j2: BomDicts) -> List[list[str]]:
+    j1_counts = j1.generate_counts()
+    j2_counts = j2.generate_counts()
+    result = [
+        [f"Common {key} matched: ", f"{value}"]
+        for key, value in diff_stats["common"].items()
     ]
+    result.extend([
+        [f"BOM 1 {key} not matched: ", f"{j1_counts[key] - value}/{j1_counts[key]}"]
+        for key, value in diff_stats["common"].items()
+    ])
+    result.extend([
+        [f"BOM 2 {key} not matched: ", f"{j2_counts[key] - value}/{j2_counts[key]}"]
+        for key, value in diff_stats["common"].items()
+    ])
+    return [i for i in result if i[1] not in ["0", "0/0"]]
 
 
 def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
@@ -33,7 +44,7 @@ def compare_dicts(options: Options) -> Tuple[int, FlatDicts | BomDicts, FlatDict
         return 1, json_1_data, json_2_data
 
 
-def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, options: Options) -> None:
+def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, options: Options) -> None:
     if options.report_template:
         template_file = options.report_template
     else:
@@ -50,7 +61,7 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, options: Options
         diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
         diffs["common_summary"].get("dependencies", []), purl_regex)
-    stats_summary = calculate_pcts(generate_diff_counts(diffs), j1.generate_counts())
+    stats_summary = calculate_pcts(generate_diff_counts(diffs, j1.options.file_2), j1, j2)
     report_result = jinja_tmpl.render(
         common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
         common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
@@ -91,14 +102,24 @@ def filter_dict(data: Dict, options: Options) -> FlatDicts:
     return FlatDicts(data).filter_out_keys(options.exclude)
 
 
-def generate_diff_counts(diffs) -> Dict:
-    return {"components": len(
+def generate_diff_counts(diffs, f2: str) -> Dict:
+    return {"common": {"components": len(
         diffs["common_summary"].get("components", {}).get("libraries", [])) + len(
         diffs["common_summary"].get("components", {}).get("frameworks", [])) + len(
         diffs["common_summary"].get("components", {}).get("applications", [])) + len(
         diffs["common_summary"].get("components", {}).get("other_types", [])),
-        "services": len(diffs["common_summary"].get("services", [])),
-        "dependencies": len(diffs["common_summary"].get("dependencies", []))}
+                       "services": len(diffs["common_summary"].get("services", [])),
+                       "dependencies": len(diffs["common_summary"].get("dependencies", []))},
+            "diff": {"components": len(
+                diffs["diff_summary"].get(f2, {}).get("components", {}).get("libraries",
+                                                                            [])) + len(
+                diffs["diff_summary"].get(f2, {}).get("components", {}).get("frameworks",
+                                                                            [])) + len(
+                diffs["diff_summary"].get(f2, {}).get("components", {}).get("applications",
+                                                                            [])) + len(
+                diffs["diff_summary"].get(f2, {}).get("components", {}).get("other_types", [])), },
+            "services": len(diffs["diff_summary"].get(f2, {}).get("services", [])),
+            "dependencies": len(diffs["diff_summary"].get(f2, {}).get("dependencies", []))}
 
 
 def get_diff(j1: FlatDicts, j2: FlatDicts, options: Options) -> Dict:
@@ -153,7 +174,7 @@ def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Dict:
     return output
 
 
-def report_results(status: int, diffs: Dict, j1: BomDicts | FlatDicts, options: Options) -> None:
+def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts | None = None, j2: BomDicts | None = None) -> None:
     if status == 0:
         print("No differences found.")
     else:
@@ -161,7 +182,7 @@ def report_results(status: int, diffs: Dict, j1: BomDicts | FlatDicts, options: 
         handle_results(options.output, diffs)
     if options.bom_diff and options.output:
         report_file = options.output.replace(".json", "") + ".html"
-        export_html_report(report_file, diffs, j1, options)  # type: ignore
+        export_html_report(report_file, diffs, j1, j2, options)  # type: ignore
 
 
 def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:

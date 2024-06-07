@@ -32,22 +32,13 @@
                     Summary
                 </th>
             </tr>
-            {% if not comp_only %}
-                {% for item in stats %}
-                    <tr>
-                        <td>{{ item[0] }}</td>
-                        <td style="text-align: right">{{ item[1] }}</td>
-
-                    </tr>
-                {% endfor %}
-            {% endif %}
-            {% if comp_only %}
+            {% for item in stats %}
                 <tr>
-                    <td>{{ stats[0][0] }}</td>
-                    <td style="text-align: right">{{ stats[0][1] }}</td>
+                    <td>{{ item[0] }}</td>
+                    <td style="text-align: right">{{ item[1] }}</td>
 
                 </tr>
-            {% endif %}
+            {% endfor %}
         </table>
 
     </div>
@@ -160,10 +151,10 @@
                     {% endfor %}</td>
                 </tr>
             {% endif %}
-            {% if diff_other_comp_1 or diff_other_comp_2 %}
+            {% if diff_other_1 or diff_other_2 %}
                 <tr>
                     <th>other types</th>
-                    <td>{% for item in diff_other_comp_1 %}
+                    <td>{% for item in diff_other_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
@@ -175,7 +166,7 @@
                             </ul>
                         </details>
                     {% endfor %}</td>
-                    <td>{% for item in diff_other_comp_2 %}
+                    <td>{% for item in diff_other_2 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
