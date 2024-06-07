@@ -12,8 +12,10 @@ ignore in the comparison and sorts all fields.
 
 ## CLI Usage
 
+Note, you may use `cjd` rather than `custom-json-diff` to run.
+
 ```
-usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE [EXCLUDE ...]] {bom-diff} ...
+usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE] {bom-diff} ...
 
 positional arguments:
   {bom-diff}            subcommand help
@@ -28,26 +30,26 @@ options:
                         Export JSON of differences to this file.
   -c CONFIG, --config-file CONFIG
                         Import TOML configuration file (overrides commandline options).
-  -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
+  -x EXCLUDE, --exclude EXCLUDE
                         Exclude field(s) from comparison.
 
 ```
 
 bom-diff usage
 ```
-usage: cjd bom-diff [-h] [--allow-new-versions] [--allow-new-data] [--components-only] [-r REPORT_TEMPLATE] [--include-extra INCLUDE [INCLUDE ...]]
+usage: custom-json-diff bom-diff [-h] [--allow-new-versions] [--allow-new-data] [--components-only] [-r REPORT_TEMPLATE] [--include-extra INCLUDE]
 
 options:
   -h, --help            show this help message and exit
   --allow-new-versions, -anv
                         Allow newer versions in second BOM to pass.
   --allow-new-data, -and
-                        Allow populated BOM values in newer BOM to pass against empty values in original BOM.
+                        Allow populated values in newer BOM to pass against empty values in original BOM.
   --components-only     Only compare components.
   -r REPORT_TEMPLATE, --report-template REPORT_TEMPLATE
                         Jinja2 template to use for report generation.
-  --include-extra INCLUDE [INCLUDE ...]
-                        Include properties/evidence/licenses/hashes in comparison (list which with space inbetween).
+  --include-extra INCLUDE
+                        Include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).
 ```
 
 ## Bom Diff
@@ -56,7 +58,8 @@ The bom-diff command compares CycloneDx BOM components, services, and dependenci
 outside of these parts. 
 
 Some fields are excluded from the component comparison by default but can be explicitly specified 
-for inclusion using `bom-diff --include-extra` and whichever field(s) you wish to include :
+for inclusion using `bom-diff --include-extra` and whichever field(s) you wish to include (e.g. 
+`--include-extra properties,evidence,licenses`:
 - properties
 - evidence
 - licenses
@@ -130,7 +133,7 @@ is flattened to:
 
 To exclude field2, you would specify `field1.field2`. To exclude the `a` field in the array of 
 objects, you would specify `field1.field3.[].a` (do NOT include the array index, just do `[]`). 
-Multiple fields may be specified separated by a space. To better understand what your fields should
+Multiple fields may be specified separated by a comma (no space). To better understand what your fields should
 be, check out json-flatten, which is the package used for this function.
 
 ## Sorting
