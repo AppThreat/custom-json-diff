@@ -14,24 +14,24 @@ logger = logging.getLogger(__name__)
 
 class BomComponent:
     def __init__(self, comp: Dict, options: "Options"):
-        self.version = set_version(comp.get("version", ""), options.allow_new_versions)
-        self.search_key = "" if options.allow_new_data else create_comp_key(comp, options.comp_keys)
-        self.original_data = comp
-        self.component_type = comp.get("type", "")
-        self.options = options
-        self.name = comp.get("name", "")
-        self.group = comp.get("group", "")
-        self.publisher = comp.get("publisher", "")
         self.author = comp.get("author", "")
         self.bom_ref = comp.get("bom-ref", "")
-        self.purl = comp.get("purl", "")
-        self.properties = comp.get("properties", {})
-        self.evidence = comp.get("evidence", {})
-        self.licenses = comp.get("licenses", [])
-        self.hashes = comp.get("hashes", [])
-        self.scope = comp.get("scope", [])
+        self.component_type = comp.get("type", "")
         self.description = comp.get("description", "")
+        self.evidence = comp.get("evidence", {})
         self.external_references = comp.get("externalReferences", [])
+        self.group = comp.get("group", "")
+        self.hashes = comp.get("hashes", [])
+        self.licenses = comp.get("licenses", [])
+        self.name = comp.get("name", "")
+        self.options = options
+        self.original_data = comp
+        self.properties = comp.get("properties", [])
+        self.publisher = comp.get("publisher", "")
+        self.purl = comp.get("purl", "")
+        self.scope = comp.get("scope", [])
+        self.search_key = "" if options.allow_new_data else create_comp_key(comp, options.comp_keys)
+        self.version = set_version(comp.get("version", ""), options.allow_new_versions)
 
     def __eq__(self, other):
         if self.options.allow_new_versions and self.options.allow_new_data:
@@ -49,13 +49,12 @@ class BomComponent:
     def _advanced_eq(self, other):
         if self.original_data == other.original_data:
             return True
-        if self.options.allow_new_data:
-            if self.options.bom_num == 2:
-                return check_for_empty_eq(other, self)
+        if self.options.bom_num == 1:
             return check_for_empty_eq(self, other)
-        return False
+        return check_for_empty_eq(other, self)
 
     def _check_list_eq(self, other):
+        # Since these elements have been sorted, we can compare them directly
         return (self.properties == other.properties and self.evidence == other.evidence and
                 self.hashes == other.hashes and self.licenses == other.licenses)
 
@@ -63,22 +62,6 @@ class BomComponent:
         if self.options.bom_num == 1:
             return self.version <= other.version
         return self.version >= other.version
-
-
-class BomService:
-    def __init__(self, svc: Dict, options: "Options"):
-        self.search_key = "" if options.allow_new_data else create_comp_key(svc, options.svc_keys)
-        self.original_data = svc
-        self.name = svc.get("name", "")
-        self.endpoints = svc.get("endpoints", [])
-        self.authenticated = svc.get("authenticated", "")
-        self.x_trust_boundary = svc.get("x-trust-boundary", "")
-
-    def __eq__(self, other):
-        return self.search_key == other.search_key and self.endpoints == other.endpoints
-
-    def __ne__(self, other):
-        return not self == other
 
 
 class BomDependency:
@@ -189,6 +172,22 @@ class BomDicts:
         return summary
 
 
+class BomService:
+    def __init__(self, svc: Dict, options: "Options"):
+        self.search_key = "" if options.allow_new_data else create_comp_key(svc, options.svc_keys)
+        self.original_data = svc
+        self.name = svc.get("name", "")
+        self.endpoints = svc.get("endpoints", [])
+        self.authenticated = svc.get("authenticated", "")
+        self.x_trust_boundary = svc.get("x-trust-boundary", "")
+
+    def __eq__(self, other):
+        return self.search_key == other.search_key and self.endpoints == other.endpoints
+
+    def __ne__(self, other):
+        return not self == other
+
+
 class FlatDicts:
 
     def __init__(self, elements: Dict | List):
@@ -296,6 +295,10 @@ class Options:  # type: ignore
         self.svc_keys = list(set(self.svc_keys))
 
 
+def advanced_eq_lists(bom_1: List, bom_2: List) -> bool:
+    return False if len(bom_1) > len(bom_2) else all(i in bom_2 for i in bom_1)
+
+
 def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
     if bom_1.name and bom_1.name != bom_2.name:
         return False
@@ -307,15 +310,7 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
         return False
     if bom_1.component_type and bom_1.component_type != bom_2.component_type:
         return False
-    if bom_1.properties and bom_1.properties != bom_2.properties:
-        return False
-    if bom_1.evidence and bom_1.evidence != bom_2.evidence:
-        return False
-    if bom_1.licenses and bom_1.licenses != bom_2.licenses:
-        return False
     if bom_1.scope and bom_1.scope != bom_2.scope:
-        return False
-    if bom_1.external_references and bom_1.external_references != bom_2.external_references:
         return False
     if not bom_1.options.allow_new_versions:
         if bom_1.version and bom_1.version != bom_2.version:
@@ -324,8 +319,16 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
             return False
         if bom_1.purl and bom_1.purl != bom_2.purl:
             return False
-        if bom_1.hashes and bom_1.hashes != bom_2.hashes:
+        if not advanced_eq_lists(bom_1.hashes, bom_2.hashes):
             return False
+    if not advanced_eq_lists(bom_1.properties, bom_2.properties):
+        return False
+    if not advanced_eq_lists(bom_1.licenses, bom_2.licenses):
+        return False
+    if not advanced_eq_lists(bom_1.external_references, bom_2.external_references):
+        return False
+    if bom_1.evidence and bom_1.evidence != bom_2.evidence:
+        return False
     return not bom_1.description or bom_1.description == bom_2.description
 
 

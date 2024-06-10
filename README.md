@@ -99,8 +99,9 @@ is attributable to an updated version. Dependency refs and dependents are compar
 string removed rather than checking for a newer version.
 
 The --allow-new-data option allows for empty fields in the original BOM not to be reported as a 
-difference when the data is populated in the second specified BOM. This option only applies to the 
-fields included by default.
+difference when the data is populated in the second specified BOM. It also addresses when a field 
+such as properties is expanded, checking that all original elements are still present but allowing
+additional elements in the newer BOM.
 
 The --components-only option only analyzes components, not services, dependencies, or other data.
 

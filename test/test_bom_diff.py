@@ -237,6 +237,74 @@ def bom_dicts_8():
 
 
 @pytest.fixture
+def bom_component_9():
+    return BomComponent(
+        {
+          "bom-ref": "pkg:maven/io.netty/netty-resolver-dns@4.1.110.Final-SNAPSHOT?type=jar",
+          "group": "io.netty",
+          "name": "netty-resolver-dns",
+          "properties": [
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/pom.xml"
+            },
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/resolver-dns-native-macos/pom.xml"
+            },
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/resolver-dns-classes-macos/pom.xml"
+            },
+          ],
+          "publisher": "The Netty Project",
+          "purl": "pkg:maven/io.netty/netty-resolver-dns@4.1.110.Final-SNAPSHOT?type=jar",
+          "scope": "required",
+          "type": "framework",
+          "version": "4.1.110.Final-SNAPSHOT"
+        }, Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True, bom_num=1)
+    )
+
+
+@pytest.fixture
+def bom_component_10():
+    return BomComponent(
+        {
+          "bom-ref": "pkg:maven/io.netty/netty-resolver-dns@4.1.110.Final-SNAPSHOT?type=jar",
+          "group": "io.netty",
+          "name": "netty-resolver-dns",
+          "properties": [
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/pom.xml"
+            },
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/resolver-dns-native-macos/pom.xml"
+            },
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/resolver-dns-classes-macos/pom.xml"
+            },
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/handler-ssl-ocsp/pom.xml"
+            },
+            {
+              "name": "SrcFile",
+              "value": "/home/runner/work/src_repos/java/netty/all/pom.xml"
+            }
+          ],
+          "publisher": "The Netty Project",
+          "purl": "pkg:maven/io.netty/netty-resolver-dns@4.1.110.Final-SNAPSHOT?type=jar",
+          "scope": "required",
+          "type": "framework",
+          "version": "4.1.110.Final-SNAPSHOT"
+        }, Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True, bom_num=2)
+    )
+
+
+@pytest.fixture
 def results():
     with open("test/test_data.json", "r", encoding="utf-8") as f:
         return json.load(f)
@@ -264,3 +332,10 @@ def test_bom_diff_options(results, bom_dicts_1, bom_dicts_2, bom_dicts_3, bom_di
     result_summary = perform_bom_diff(bom_dicts_5, bom_dicts_6)
     assert result_summary == results["result_3"]
 
+
+def test_bom_components_lists(bom_component_9, bom_component_10):
+    # tests allow_new_data with component lists of dicts
+    assert bom_component_9 == bom_component_10
+    bom_component_9.options.bom_num = 2
+    bom_component_10.options.bom_num = 1
+    assert bom_component_9 != bom_component_10
