@@ -84,13 +84,13 @@
             {% endif %}
             {% if diff_apps_1 or diff_apps_2 %}
                 <tr>
-                    <th>applications</th>
+                    <th>applications: {{ diff_apps_1 | length }} vs {{ diff_apps_2 | length }}</th>
                     <td>{% for item in diff_apps_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -102,7 +102,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -113,13 +113,13 @@
             {% endif %}
             {% if diff_frameworks_1 or diff_frameworks_2 %}
                 <tr>
-                    <th>frameworks</th>
+                    <th>frameworks: {{ diff_frameworks_1 | length }} vs {{ diff_frameworks_2 | length }}</th>
                     <td>{% for item in diff_frameworks_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -131,7 +131,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -142,13 +142,13 @@
             {% endif %}
             {% if diff_lib_1 or diff_lib_2 %}
                 <tr>
-                    <th>libraries</th>
+                    <th>libraries: {{ diff_lib_1 | length }} vs {{ diff_lib_2 | length }}</th>
                     <td>{% for item in diff_lib_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["hashes", "licenses", "properties", "evidence"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
 
@@ -161,7 +161,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -172,13 +172,13 @@
             {% endif %}
             {% if diff_other_1 or diff_other_2 %}
                 <tr>
-                    <th>other types</th>
+                    <th>other types: {{ diff_other_1 | length }} vs {{ diff_other_2 | length }}</th>
                     <td>{% for item in diff_other_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -190,7 +190,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -208,7 +208,7 @@
                                 <summary>{{ item['name'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        {% if value != "" %}
                                             <li>{{ key }}: {{ value }}</li>
                                         {% endif %}
                                     {% endfor %}
@@ -220,7 +220,7 @@
                                 <summary>{{ item['name'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        {% if value != "" %}
                                             <li>{{ key }}: {{ value }}</li>
                                         {% endif %}
                                     {% endfor %}
@@ -303,7 +303,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -320,7 +320,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -337,7 +337,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -355,7 +355,7 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
                                 {% endfor %}
@@ -373,7 +373,7 @@
                                 <summary>{{ item['name'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        {% if value != "" %}
                                             <li>{{ key }}: {{ value }}</li>
                                         {% endif %}
                                     {% endfor %}
