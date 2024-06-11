@@ -15,22 +15,30 @@ from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts, Options
 logger = logging.getLogger(__name__)
 
 
-def calculate_pcts(diff_stats: Dict, j1: BomDicts, j2: BomDicts) -> List[list[str]]:
+def calculate_pcts(diffs: Dict, j1: BomDicts, j2: BomDicts) -> Dict:
     j1_counts = j1.generate_counts()
     j2_counts = j2.generate_counts()
-    result = [
-        [f"Common {key} matched: ", f"{value}"]
-        for key, value in diff_stats["common"].items()
-    ]
-    result.extend([
-        [f"BOM 1 {key} not matched: ", f"{j1_counts[key] - value}/{j1_counts[key]}"]
-        for key, value in diff_stats["common"].items()
-    ])
-    result.extend([
-        [f"BOM 2 {key} not matched: ", f"{j2_counts[key] - value}/{j2_counts[key]}"]
-        for key, value in diff_stats["common"].items()
-    ])
-    return [i for i in result if not i[1].startswith("0")]
+    common_counts = generate_counts(diffs["common_summary"])
+    result = []
+    for key, value in common_counts.items():
+        total = j1_counts[key] + j2_counts[key]
+        if not total == 0:
+            result.append([f"Common {key} matched: ", f"{value} ({round(((value*2)/total) * 100, 2)})%"])
+
+    result_2 = summarize_diffs({}, generate_counts(diffs["diff_summary"][j1.filename]), j1_counts)
+    result_2 = summarize_diffs(result_2, generate_counts(diffs["diff_summary"][j2.filename]), j2_counts)
+    return {"common_summary": result, "breakdown": result_2}
+
+
+def summarize_diffs(result: Dict, diff_counts: Dict, bom_counts: Dict) -> Dict:
+    for key, value in diff_counts.items():
+        found = bom_counts[key] - value
+        if not bom_counts[key] == 0:
+            if result.get(key):
+                result[key].append(f"{found}/{bom_counts[key]} ({round(((found) / bom_counts[key]) * 100, 2)}%)")
+            else:
+                result[key] = [f"{found}/{bom_counts[key]} ({round(((found) / bom_counts[key]) * 100, 2)}%)"]
+    return result
 
 
 def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
@@ -57,14 +65,14 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
         template = tmpl_file.read()
     jinja_env = Environment(autoescape=False)
     jinja_tmpl = jinja_env.from_string(template)
-    purl_regex = re.compile(r"[^/]+@[^?\s]+")
+    purl_regex = re.compile(r"[^/]+/[^/]+@[^?\s]+")
     diffs["diff_summary"][options.file_1]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_1].get("dependencies", []), purl_regex)
     diffs["diff_summary"][options.file_2]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
         diffs["common_summary"].get("dependencies", []), purl_regex)
-    stats_summary = calculate_pcts(generate_diff_counts(diffs, j1.options.file_2), j1, j2)
+    stats_summary = calculate_pcts(diffs, j1, j2)
     metadata_results = bool(
         diffs["diff_summary"][options.file_1].get("misc_data", {}) or
         diffs["diff_summary"][options.file_2].get("misc_data", {})
@@ -75,15 +83,15 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
         common_services=diffs["common_summary"].get("services", []),
         common_deps=diffs["common_summary"].get("dependencies", []),
         common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
-        common_other=diffs["common_summary"].get("components", {}).get("other_types", []),
+        common_other=diffs["common_summary"].get("components", {}).get("other_components", []),
         diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("libraries", []),
         diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("libraries", []),
         diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("frameworks", []),
         diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("frameworks", []),
         diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("applications", []),
         diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("applications", []),
-        diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("other_types", []),
-        diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("other_types", []),
+        diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("other_components", []),
+        diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("other_components", []),
         diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
         diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
         diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
@@ -110,24 +118,15 @@ def filter_dict(data: Dict, options: Options) -> FlatDicts:
     return FlatDicts(data).filter_out_keys(options.exclude)
 
 
-def generate_diff_counts(diffs, f2: str) -> Dict:
-    return {"common": {"components": len(
-        diffs["common_summary"].get("components", {}).get("libraries", [])) + len(
-        diffs["common_summary"].get("components", {}).get("frameworks", [])) + len(
-        diffs["common_summary"].get("components", {}).get("applications", [])) + len(
-        diffs["common_summary"].get("components", {}).get("other_types", [])),
-                       "services": len(diffs["common_summary"].get("services", [])),
-                       "dependencies": len(diffs["common_summary"].get("dependencies", []))},
-            "diff": {"components": len(
-                diffs["diff_summary"].get(f2, {}).get("components", {}).get("libraries",
-                                                                            [])) + len(
-                diffs["diff_summary"].get(f2, {}).get("components", {}).get("frameworks",
-                                                                            [])) + len(
-                diffs["diff_summary"].get(f2, {}).get("components", {}).get("applications",
-                                                                            [])) + len(
-                diffs["diff_summary"].get(f2, {}).get("components", {}).get("other_types", [])), },
-            "services": len(diffs["diff_summary"].get(f2, {}).get("services", [])),
-            "dependencies": len(diffs["diff_summary"].get(f2, {}).get("dependencies", []))}
+def generate_counts(data: Dict) -> Dict:
+    result = {"libraries": len(data.get("components", {}).get("libraries", [])),
+        "frameworks": len(data.get("components", {}).get("frameworks", [])),
+        "applications": len(data.get("components", {}).get("applications", [])),
+        "other_components": len(data.get("components", {}).get("other_components", []))}
+    result["components"] = sum(result.values())
+    result |= {"services": len(data.get("services", [])),
+        "dependencies": len(data.get("dependencies", []))}
+    return result
 
 
 def get_diff(j1: FlatDicts, j2: FlatDicts, options: Options) -> Dict:
@@ -164,8 +163,6 @@ def load_json(json_file: str, options: Options) -> FlatDicts | BomDicts:
 
 
 def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
-    if not deps:
-        return deps
     for i in deps:
         i["short_ref"] = match[0] if (match := regex.findall(i["ref"])) else i["ref"]
     return deps

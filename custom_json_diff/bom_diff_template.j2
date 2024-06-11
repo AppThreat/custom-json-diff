@@ -3,12 +3,6 @@
 <head>
     <title>BOM Diff Summary</title>
     <style>
-        th, td {
-            border: 1px solid black;
-            padding: 15px;
-            vertical-align: top;
-            text-align: left;
-        }
 
         .table_summary {
             display: grid;
@@ -17,7 +11,19 @@
 
         .table_summary2 {
             display: grid;
-            grid-template-columns: 75% 20% 5%;
+            grid-template-columns: 72% 23% 5%;
+        }
+
+        .table_summary3 {
+            display: grid;
+            grid-template-columns: 30% 40% 30%;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 5px;
+            vertical-align: top;
+            text-align: left;
         }
 
     </style>
@@ -28,11 +34,13 @@
     <div>
         <table style="width: 100%;">
             <tr>
-                <th colspan="2" style="text-align: center; background-color: #d7ddde">Overall
+                <th colspan="2"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Overall
                     Summary
                 </th>
             </tr>
-            {% for item in stats %}
+            {% for item in stats["common_summary"] %}
                 <tr>
                     <td>{{ item[0] }}</td>
                     <td style="text-align: right">{{ item[1] }}</td>
@@ -40,7 +48,7 @@
                 </tr>
             {% endfor %}
             <tr>
-                <td>Metadata matched</td>
+                <td>Metadata matched:</td>
                 {% if metadata %}
                     <td style="text-align: right">✖</td>
                 {% endif %}
@@ -50,16 +58,17 @@
 
             </tr>
         </table>
-
     </div>
 </div>
 <div><h1 style="text-align:center;">BOM Diff Summary</h1></div>
 <div class="table_summary">
     <div></div>
     <div>
-        <table class="master_table" style="width: 100%">
+        <table style="width: 100%">
             <tr>
-                <th colspan="3" style="text-align: center; background-color: #d7ddde">Component
+                <th colspan="3"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Component
                     Diff
                 </th>
             </tr>
@@ -228,15 +237,18 @@
                                 <summary>{{ item['short_ref'] }}</summary>
                                 <ul>
                                     <li>ref: {{ item['ref'] }}</li>
-                                    <li>dependencies:
+                                    {% if item['dependsOn']|length > 0 %}
+                                        <li>dependencies:</li>
                                         <ul>
                                             {% for dep in item['dependsOn'] %}
                                                 <li>{{ dep }}</li>
                                             {% endfor %}
                                         </ul>
-                                    </li>
+                                    {% endif %}
+                                    {% if item['dependsOn']|length == 0 %}
+                                        <li>dependencies: N/A</li>
+                                    {% endif %}
                                 </ul>
-
                             </details>
                         {% endfor %}</td>
                         <td>{% for item in diff_deps_2 %}
@@ -244,13 +256,17 @@
                                 <summary>{{ item['short_ref'] }}</summary>
                                 <ul>
                                     <li>ref: {{ item['ref'] }}</li>
-                                    <li>dependencies:
+                                    {% if item['dependsOn']|length > 0 %}
+                                        <li>dependencies:</li>
                                         <ul>
                                             {% for dep in item['dependsOn'] %}
                                                 <li>{{ dep }}</li>
                                             {% endfor %}
                                         </ul>
-                                    </li>
+                                    {% endif %}
+                                    {% if item['dependsOn']|length == 0 %}
+                                        <li>dependencies: N/A</li>
+                                    {% endif %}
                                 </ul>
 
                             </details>
@@ -266,9 +282,11 @@
 <div class="table_summary">
     <div></div>
     <div>
-        <table class="master_table" style="width: 100%">
+        <table style="width: 100%">
             <tr>
-                <th colspan="2" style="text-align: center; background-color: #d7ddde">Common
+                <th colspan="2"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Common
                     Components
                 </th>
             </tr>
@@ -372,13 +390,18 @@
                                 <summary>{{ item['short_ref'] }}</summary>
                                 <ul>
                                     <li>ref: {{ item['ref'] }}</li>
-                                    <li>dependencies:
-                                        <ul>
-                                            {% for dep in item['dependsOn'] %}
-                                                <li>{{ dep }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    </li>
+                                    {% if item['dependsOn']|length >0 %}
+                                        <li>dependencies:
+                                            <ul>
+                                                {% for dep in item['dependsOn'] %}
+                                                    <li>{{ dep }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </li>
+                                    {% endif %}
+                                    {% if item['dependsOn']|length == 0 %}
+                                        <li>dependencies: N/A</li>
+                                    {% endif %}
                                 </ul>
 
                             </details>
@@ -386,6 +409,36 @@
                     </tr>
                 {% endif %}
             {% endif %}
+        </table>
+    </div>
+    <div></div>
+</div>
+<p></p>
+<div class="table_summary3">
+    <div></div>
+    <div>
+        <table style="width: 100%">
+            <tr>
+                <th colspan="3"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Matched Components Breakdown
+                </th>
+            </tr>
+            <tr>
+                <td style="width: 20%"></td>
+                <th style="text-align: center; width: 40%">{{ bom_1 }}</th>
+                <th style="text-align: center; width: 40%">{{ bom_2 }}</th>
+            </tr>
+            {% for key, value in stats["breakdown"]|items %}
+                <tr>
+                    <th>{{ key }}</th>
+                    <td style="text-align: center; vertical-align: middle">{{ value[0] }}</td>
+                    <td style="text-align: center; vertical-align: middle">{{ value[1] }}</td>
+                </tr>
+            {% endfor %}
+            <tr>
+
+            </tr>
         </table>
     </div>
     <div></div>
