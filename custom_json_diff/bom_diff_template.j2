@@ -11,12 +11,7 @@
 
         .table_summary2 {
             display: grid;
-            grid-template-columns: 72% 23% 5%;
-        }
-
-        .table_summary3 {
-            display: grid;
-            grid-template-columns: 30% 40% 30%;
+            grid-template-columns: 25% 23% 2% 25% 25%;
         }
 
         th, td {
@@ -29,6 +24,7 @@
     </style>
 </head>
 <body>
+<div><h1 style="text-align:center;">BOM Diff Summary</h1></div>
 <div class="table_summary2">
     <div></div>
     <div>
@@ -36,8 +32,7 @@
             <tr>
                 <th colspan="2"
                     style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
-                    Overall
-                    Summary
+                    Common Elements Summary
                 </th>
             </tr>
             {% for item in stats["common_summary"] %}
@@ -59,8 +54,32 @@
             </tr>
         </table>
     </div>
+    <div></div>
+    <div>
+        <table style="width: 100%">
+            <tr>
+                <th colspan="3"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Unique Elements Breakdown
+                </th>
+            </tr>
+            <tr>
+                <td style="width: 20%"></td>
+                <th style="text-align: center; width: 40%">{{ bom_1 }}</th>
+                <th style="text-align: center; width: 40%">{{ bom_2 }}</th>
+            </tr>
+            {% for key, value in stats["breakdown"]|items %}
+                <tr>
+                    <td>{{ key }}</td>
+                    <td style="text-align: center; vertical-align: middle">{{ value[0] }}</td>
+                    <td style="text-align: center; vertical-align: middle">{{ value[1] }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div></div>
 </div>
-<div><h1 style="text-align:center;">BOM Diff Summary</h1></div>
+<br>
 <div class="table_summary">
     <div></div>
     <div>
@@ -84,14 +103,23 @@
             {% endif %}
             {% if diff_apps_1 or diff_apps_2 %}
                 <tr>
-                    <th>applications</th>
+                    <th>applications<br><br>{{ diff_apps_1 | length }}
+                        vs {{ diff_apps_2 | length }}</th>
                     <td>{% for item in diff_apps_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>{{ key }}:</li>
+                                        <ul>
+                                            {% for i in value %}
+                                                <li>{{ i }}</li>
+                                            {% endfor %}
+                                        </ul>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -102,8 +130,16 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>{{ key }}:</li>
+                                        <ul>
+                                            {% for i in value %}
+                                                <li>{{ i }}</li>
+                                            {% endfor %}
+                                        </ul>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -113,14 +149,27 @@
             {% endif %}
             {% if diff_frameworks_1 or diff_frameworks_2 %}
                 <tr>
-                    <th>frameworks</th>
+                    <th>frameworks<br><br>{{ diff_frameworks_1 | length }}
+                        vs {{ diff_frameworks_2 | length }}</th>
                     <td>{% for item in diff_frameworks_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -131,8 +180,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -142,7 +203,8 @@
             {% endif %}
             {% if diff_lib_1 or diff_lib_2 %}
                 <tr>
-                    <th>libraries</th>
+                    <th>libraries<br><br>{{ diff_lib_1 | length }} vs {{ diff_lib_2 | length }}
+                    </th>
                     <td>{% for item in diff_lib_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
@@ -151,7 +213,18 @@
                                     {% if value != "" and key not in ["hashes", "licenses", "properties", "evidence"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
-
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                 {% endfor %}
                             </ul>
                         </details>
@@ -161,8 +234,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -172,14 +257,27 @@
             {% endif %}
             {% if diff_other_1 or diff_other_2 %}
                 <tr>
-                    <th>other types</th>
+                    <th>other<br>components<br><br>{{ diff_other_1 | length }}
+                        vs {{ diff_other_2 | length }}</th>
                     <td>{% for item in diff_other_1 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -190,8 +288,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -202,13 +312,14 @@
             {% if not comp_only %}
                 {% if diff_services_1 or diff_services_2 %}
                     <tr>
-                        <th>services</th>
+                        <th>services<br><br>{{ diff_services_1 | length }}
+                            vs {{ diff_services_2 | length }}</th>
                         <td>{% for item in diff_services_1 %}
                             <details>
                                 <summary>{{ item['name'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        {% if value != "" %}
                                             <li>{{ key }}: {{ value }}</li>
                                         {% endif %}
                                     {% endfor %}
@@ -220,7 +331,7 @@
                                 <summary>{{ item['name'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        {% if value != "" %}
                                             <li>{{ key }}: {{ value }}</li>
                                         {% endif %}
                                     {% endfor %}
@@ -231,7 +342,8 @@
                 {% endif %}
                 {% if diff_deps_1 or diff_deps_2 %}
                     <tr>
-                        <th>dependencies</th>
+                        <th>dependencies<br><br>{{ diff_deps_1 | length }}
+                            vs {{ diff_deps_2 | length }}</th>
                         <td>{% for item in diff_deps_1 %}
                             <details>
                                 <summary>{{ item['short_ref'] }}</summary>
@@ -278,7 +390,7 @@
     </div>
     <div></div>
 </div>
-<p></p>
+<br>
 <div class="table_summary">
     <div></div>
     <div>
@@ -303,8 +415,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -320,8 +444,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -337,8 +473,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -355,8 +503,20 @@
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
-                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                    {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
                             </ul>
@@ -373,7 +533,7 @@
                                 <summary>{{ item['name'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" and key not in ["properties","evidence","hashes","licenses"] %}
+                                        {% if value != "" %}
                                             <li>{{ key }}: {{ value }}</li>
                                         {% endif %}
                                     {% endfor %}
@@ -413,36 +573,6 @@
     </div>
     <div></div>
 </div>
-<p></p>
-<div class="table_summary3">
-    <div></div>
-    <div>
-        <table style="width: 100%">
-            <tr>
-                <th colspan="3"
-                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
-                    Matched Components Breakdown
-                </th>
-            </tr>
-            <tr>
-                <td style="width: 20%"></td>
-                <th style="text-align: center; width: 40%">{{ bom_1 }}</th>
-                <th style="text-align: center; width: 40%">{{ bom_2 }}</th>
-            </tr>
-            {% for key, value in stats["breakdown"]|items %}
-                <tr>
-                    <th>{{ key }}</th>
-                    <td style="text-align: center; vertical-align: middle">{{ value[0] }}</td>
-                    <td style="text-align: center; vertical-align: middle">{{ value[1] }}</td>
-                </tr>
-            {% endfor %}
-            <tr>
-
-            </tr>
-        </table>
-    </div>
-    <div></div>
-</div>
-<p></p>
+<br>
 </body>
 </html>

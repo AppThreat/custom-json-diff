@@ -22,23 +22,12 @@ def calculate_pcts(diffs: Dict, j1: BomDicts, j2: BomDicts) -> Dict:
     result = []
     for key, value in common_counts.items():
         total = j1_counts[key] + j2_counts[key]
-        if not total == 0:
+        if total != 0:
             result.append([f"Common {key} matched: ", f"{value} ({round(((value*2)/total) * 100, 2)})%"])
 
-    result_2 = summarize_diffs({}, generate_counts(diffs["diff_summary"][j1.filename]), j1_counts)
-    result_2 = summarize_diffs(result_2, generate_counts(diffs["diff_summary"][j2.filename]), j2_counts)
+    result_2 = summarize_diffs({}, generate_counts(diffs["diff_summary"][j1.filename]), j1_counts, common_counts)
+    result_2 = summarize_diffs(result_2, generate_counts(diffs["diff_summary"][j2.filename]), j2_counts, common_counts)
     return {"common_summary": result, "breakdown": result_2}
-
-
-def summarize_diffs(result: Dict, diff_counts: Dict, bom_counts: Dict) -> Dict:
-    for key, value in diff_counts.items():
-        found = bom_counts[key] - value
-        if not bom_counts[key] == 0:
-            if result.get(key):
-                result[key].append(f"{found}/{bom_counts[key]} ({round(((found) / bom_counts[key]) * 100, 2)}%)")
-            else:
-                result[key] = [f"{found}/{bom_counts[key]} ({round(((found) / bom_counts[key]) * 100, 2)}%)"]
-    return result
 
 
 def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
@@ -119,14 +108,11 @@ def filter_dict(data: Dict, options: Options) -> FlatDicts:
 
 
 def generate_counts(data: Dict) -> Dict:
-    result = {"libraries": len(data.get("components", {}).get("libraries", [])),
-        "frameworks": len(data.get("components", {}).get("frameworks", [])),
-        "applications": len(data.get("components", {}).get("applications", [])),
-        "other_components": len(data.get("components", {}).get("other_components", []))}
-    result["components"] = sum(result.values())
-    result |= {"services": len(data.get("services", [])),
-        "dependencies": len(data.get("dependencies", []))}
-    return result
+    return {"libraries": len(data.get("components", {}).get("libraries", [])),
+              "frameworks": len(data.get("components", {}).get("frameworks", [])),
+              "applications": len(data.get("components", {}).get("applications", [])),
+              "other_components": len(data.get("components", {}).get("other_components", [])),
+              "services": len(data.get("services", [])), "dependencies": len(data.get("dependencies", []))}
 
 
 def get_diff(j1: FlatDicts, j2: FlatDicts, options: Options) -> Dict:
@@ -213,3 +199,14 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     if isinstance(lst[0], (str, int)):
         lst.sort()
     return lst
+
+
+def summarize_diffs(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:
+    for key, value in diff_counts.items():
+        if bom_counts[key] != 0:
+            found = bom_counts[key] - common_counts.get(key, 0)
+            if result.get(key):
+                result[key].append(f"{found}/{bom_counts[key]} ({round((found / bom_counts[key]) * 100, 2)}%)")
+            else:
+                result[key] = [f"{found}/{bom_counts[key]} ({round((found / bom_counts[key]) * 100, 2)}%)"]
+    return result
