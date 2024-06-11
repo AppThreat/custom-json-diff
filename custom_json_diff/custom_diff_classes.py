@@ -161,18 +161,16 @@ class BomDicts:
     def to_summary(self) -> Dict:
         summary: Dict = {self.filename: {}}
         if self.components:
-            summary[self.filename] = {
-                "components": {
-                    "libraries": [
-                    i.original_data for i in self.components if i.component_type == "library"],
-                    "frameworks": [
-                    i.original_data for i in self.components if i.component_type == "framework"],
-                    "applications": [i.original_data for i in self.components if
+            summary[self.filename] = {"components": {
+                "libraries": [i.original_data for i in self.components if
+                              i.component_type == "library"],
+                "frameworks": [i.original_data for i in self.components if
+                               i.component_type == "framework"],
+                "applications": [i.original_data for i in self.components if
                                  i.component_type == "application"],
-                    "other_components": [i.original_data for i in self.components if
-                                 i.component_type not in ("library", "framework", "application")],
-                }
-            }
+                "other_components": [i.original_data for i in self.components if
+                                     i.component_type not in (
+                                         "library", "framework", "application")], }}
         if not self.options.comp_only:
             if self.data:
                 summary[self.filename] |= {"misc_data": self.data.to_dict(unflat=True)}
