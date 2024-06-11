@@ -141,10 +141,22 @@ class BomDicts:
         return new_bom_dict
 
     def generate_counts(self) -> Dict:
-        return {
-            "filename": self.filename, "components": len(self.components),
-            "services": len(self.services), "dependencies": len(self.dependencies)
-        }
+        lib = 0
+        frameworks = 0
+        apps = 0
+        other = 0
+        for i in self.components:
+            if i.component_type == "library":
+                lib += 1
+            elif i.component_type == "framework":
+                frameworks += 1
+            elif i.component_type == "application":
+                apps += 1
+            else:
+                other += 1
+        return {"components": len(self.components), "applications": apps,
+                "frameworks": frameworks, "libraries": lib, "other_components": other,
+                "services": len(self.services), "dependencies": len(self.dependencies)}
 
     def to_summary(self) -> Dict:
         summary: Dict = {self.filename: {}}
@@ -157,7 +169,7 @@ class BomDicts:
                     i.original_data for i in self.components if i.component_type == "framework"],
                     "applications": [i.original_data for i in self.components if
                                  i.component_type == "application"],
-                    "other_types": [i.original_data for i in self.components if
+                    "other_components": [i.original_data for i in self.components if
                                  i.component_type not in ("library", "framework", "application")],
                 }
             }
