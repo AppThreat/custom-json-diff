@@ -130,7 +130,7 @@ def main():
     result, j1, j2 = compare_dicts(options)
 
     if args.bom_diff:
-        result_summary = perform_bom_diff(j1, j2)
+        result, result_summary = perform_bom_diff(j1, j2)
     else:
         result_summary = get_diff(j1, j2, options)
     report_results(result, result_summary, options, j1, j2)

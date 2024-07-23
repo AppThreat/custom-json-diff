@@ -91,8 +91,22 @@ services
 - x-trust-boundary
 
 dependencies
-- ref
 - dependsOn
+- ref
+
+vulnerabilities
+- advisories
+- affects
+- bom-ref
+- cwes
+- description
+- detail
+- id
+- published
+- ratings
+- references
+- source
+- updated
 
 The --allow-new-versions option attempts to parse component versions and ascertain if a discrepancy 
 is attributable to an updated version. Dependency refs and dependents are compared with the version 

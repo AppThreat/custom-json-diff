@@ -2,6 +2,7 @@ import logging
 import re
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Dict, List, Set, Tuple
 
 import semver
@@ -50,8 +51,8 @@ class BomComponent:
         if self.original_data == other.original_data:
             return True
         if self.options.bom_num == 1:
-            return check_for_empty_eq(self, other)
-        return check_for_empty_eq(other, self)
+            return eq_allow_new_data_comp(self, other)
+        return eq_allow_new_data_comp(other, self)
 
     def _check_list_eq(self, other):
         # Since these elements have been sorted, we can compare them directly
@@ -77,18 +78,19 @@ class BomDependency:
 
 
 class BomDicts:
-    def __init__(self, options: "Options", filename: str, data: Dict,
-                 metadata: Dict, components: List | None = None,
-                 services: List | None = None, dependencies: List | None = None):
+    def __init__(self, options: "Options", filename: str, data: Dict, metadata: Dict,
+                 components: List | None = None, services: List | None = None,
+                 dependencies: List | None = None, vulnerabilities: List | None = None):
         self.options = options
         self.options.bom_num = 1 if filename == options.file_1 else 2
-        self.data, self.components, self.services, self.dependencies = import_bom_dict(
-            self.options, data, metadata, components, services, dependencies)
+        self.data, self.components, self.services, self.dependencies, self.vdrs = import_bom_dict(
+            self.options, data, metadata, components, services, dependencies, vulnerabilities)
         self.filename = filename
 
     def __eq__(self, other):
         return (self.data == other.data and self.components == other.components and
-                self.services == other.services and self.dependencies == other.dependencies)
+                self.services == other.services and self.dependencies == other.dependencies and
+                self.vdrs == self.vdrs)
 
     def __ne__(self, other):
         return not self == other
@@ -98,20 +100,24 @@ class BomDicts:
         components = []
         services = []
         dependencies = []
+        vulnerabilities = []
         if other.components:
             components = [i for i in other.components if i not in self.components]
         if other.services:
             services = [i for i in other.services if i not in self.services]
         if other.dependencies:
             dependencies = [i for i in other.dependencies if i not in self.dependencies]
+        if other.vdrs:
+            vulnerabilities = [i for i in other.vdrs if i not in self.vdrs]
         new_bom_dict = BomDicts(
             other.options,
             other.filename,
             {},
             {},
-            components,
-            services,
-            dependencies
+            components=components,
+            services=services,
+            dependencies=dependencies,
+            vulnerabilities=vulnerabilities
         )
         if new_bom_dict.filename == new_bom_dict.options.file_1:
             new_bom_dict.options.bom_num = 1
@@ -122,25 +128,29 @@ class BomDicts:
         components = []
         services = []
         dependencies = []
+        vulnerabilities = []
         if self.components:
             components = [i for i in other.components if i in self.components]
         if self.services:
             services = [i for i in other.services if i in self.services]
         if self.dependencies:
             dependencies = [i for i in other.dependencies if i in self.dependencies]
+        if self.vdrs:
+            vulnerabilities = [i for i in other.vdrs if i in self.vdrs]
         new_bom_dict = BomDicts(
             other.options,
             title or other.filename,
             {},
             {},
-            components,
-            services,
-            dependencies
+            components=components,
+            services=services,
+            dependencies=dependencies,
+            vulnerabilities=vulnerabilities
         )
         new_bom_dict.data = self.data.intersection(other.data)
         return new_bom_dict
 
-    def generate_counts(self) -> Dict:
+    def generate_comp_counts(self) -> Dict:
         lib = 0
         frameworks = 0
         apps = 0
@@ -156,7 +166,8 @@ class BomDicts:
                 other += 1
         return {"components": len(self.components), "applications": apps,
                 "frameworks": frameworks, "libraries": lib, "other_components": other,
-                "services": len(self.services), "dependencies": len(self.dependencies)}
+                "services": len(self.services), "dependencies": len(self.dependencies),
+                "vulnerabilities": len(self.vdrs)}
 
     def to_summary(self) -> Dict:
         summary: Dict = {self.filename: {}}
@@ -179,6 +190,8 @@ class BomDicts:
             if self.dependencies:
                 summary[self.filename] |= {"dependencies": [
                     i.original_data for i in self.dependencies]}
+            if self.vdrs:
+                summary[self.filename] |= {"vulnerabilities": [i.data for i in self.vdrs]}
         return summary
 
 
@@ -305,11 +318,118 @@ class Options:  # type: ignore
         self.svc_keys = list(set(self.svc_keys))
 
 
+@dataclass
+class VDR:
+    id: str = ""
+    bom_ref: str = ""
+    advisories: list = field(default_factory=list)
+    affects: list = field(default_factory=list)
+    cwes: list = field(default_factory=list)
+    data: dict = field(default_factory=dict)
+    description: str = ""
+    detail: str = ""
+    published: str = ""
+    ratings: list = field(default_factory=list)
+    references: list = field(default_factory=list)
+    source: dict = field(default_factory=dict)
+    updated: str = ""
+    options: Options = field(default_factory=Options())  # type: ignore
+
+    def __post_init__(self):
+        self.id = self.data.get("id") or ""
+        self.bom_ref = self.data.get("bom-ref") or ""
+        self.advisories = self.data.get("advisories") or []
+        self.affects = self.data.get("affects") or []
+        self.cwes = self.data.get("cwes") or []
+        self.description = self.data.get("description") or ""
+        self.detail = self.data.get("detail") or ""
+        self.published = self.data.get("published") or ""
+        self.ratings = self.data.get("ratings") or []
+        self.references = self.data.get("references") or []
+        self.source = self.data.get("source") or {}
+        self.updated = self.data.get("updated") or ""
+
+    def __eq__(self, other):
+        if self.data == other.data:
+            return True
+        if self.options.allow_new_versions and self.options.allow_new_data:
+            return self._advanced_eq(other)
+        if self.options.allow_new_versions:
+            return self._field_eq(other) and compare_affects(self, other, False)
+        if self.options.allow_new_data:
+            return self._advanced_eq(other)
+        return False
+
+    def _advanced_eq(self, other):
+        if self.options.bom_num == 1:
+            return eq_allow_new_data_vdr(self, other)
+        return eq_allow_new_data_vdr(other, self)
+
+    def _field_eq(self, other):
+        return all((
+                self.id == other.id,
+                self.advisories == other.advisories,
+                self.cwes == other.cwes,
+                self.description == other.description,
+                self.detail == other.detail,
+                self.published == other.published,
+                self.ratings == other.ratings,
+                self.references == other.references,
+                self.source == other.source,
+            ))
+
+
 def advanced_eq_lists(bom_1: List, bom_2: List) -> bool:
     return False if len(bom_1) > len(bom_2) else all(i in bom_2 for i in bom_1)
 
 
-def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
+def compare_affects(v1, v2, allow_new_data):
+    # removes version from ref for allow_new_versions
+    a1 = [
+        {"ref": i.get("ref", "").split("@")[0]
+        if "@" in i.get("ref", "") else i.get("ref", ""),
+         "versions": i.get("versions")} for i in v1.affects
+    ]
+    a2 = [
+        {"ref": i.get("ref", "").split("@")[0]
+        if "@" in i.get("ref", "") else i.get("ref", ""),
+         "versions": i.get("versions")} for i in v2.affects
+    ]
+    if allow_new_data:
+        if v1.options.bom_num == 1:
+            return advanced_eq_lists(a1, a2)
+        return advanced_eq_lists(a2, a1)
+    return a1 == a2
+
+
+def compare_bom_refs(v1, v2):
+    """Compares bom-refs without version"""
+    if "@" in v1 and "@" in v2:
+        v1 = v1.split("@")[0]
+        v2 = v2.split("@")[0]
+    return v1 == v2
+
+
+def compare_date(dt1: str, dt2: str, comparator: str):
+    try:
+        date_1 = datetime.fromisoformat(dt1)
+        date_2 = datetime.fromisoformat(dt2)
+        match comparator:
+            case "<":
+                return date_1 < date_2
+            case ">":
+                return date_1 > date_2
+            case "<=":
+                return  date_1 <= date_2
+            case ">=":
+                return date_1 >= date_2
+            case _:
+                return date_1 == date_2
+    except ValueError:
+        return False
+
+
+def eq_allow_new_data_comp(bom_1: BomComponent, bom_2: BomComponent) -> bool:
     if bom_1.name and bom_1.name != bom_2.name:
         return False
     if bom_1.group and bom_1.group != bom_2.group:
@@ -342,6 +462,43 @@ def check_for_empty_eq(bom_1: BomComponent, bom_2: BomComponent) -> bool:
     return not bom_1.description or bom_1.description == bom_2.description
 
 
+def eq_allow_new_data_vdr(vdr_1: "VDR", vdr_2: "VDR") -> bool:
+    if vdr_1.id and vdr_1.id != vdr_2.id:
+        return False
+    if vdr_1.options.allow_new_versions:
+        if vdr_1.updated and vdr_1.updated != vdr_2.updated:
+            if not compare_date(vdr_1.updated, vdr_2.updated, "<"):
+                return False
+        if vdr_1.bom_ref and vdr_1.bom_ref != vdr_2.bom_ref:
+            if not compare_bom_refs(vdr_1.bom_ref, vdr_2.bom_ref):
+                return False
+        if vdr_1.affects and vdr_1.affects != vdr_2.affects:
+            if not compare_affects(vdr_1, vdr_2, vdr_1.options.allow_new_data):
+                return False
+    else:
+        if vdr_1.bom_ref and vdr_1.bom_ref != vdr_2.bom_ref:
+            return False
+        if vdr_1.updated and vdr_1.updated != vdr_2.updated:
+            return False
+        if vdr_1.affects and not advanced_eq_lists(vdr_1.affects, vdr_2.affects):
+            return False
+    if vdr_1.published and vdr_1.published != vdr_2.published:
+        return False
+    if vdr_1.references and not advanced_eq_lists(vdr_1.references, vdr_2.references):
+        return False
+    if vdr_1.ratings and not advanced_eq_lists(vdr_1.ratings, vdr_2.ratings):
+        return False
+    if vdr_1.cwes and not advanced_eq_lists(vdr_1.cwes, vdr_2.cwes):
+        return False
+    if not advanced_eq_lists(vdr_1.advisories, vdr_2.advisories):
+        return False
+    if vdr_1.source and vdr_1.source != vdr_2.source:
+        return False
+    if vdr_1.detail and vdr_1.detail != vdr_2.detail:
+        return False
+    return not vdr_1.description or vdr_1.description == vdr_2.description
+
+
 def check_key(key: str, exclude_keys: Set[str] | List[str]) -> bool:
     return not any(key.startswith(k) for k in exclude_keys)
 
@@ -368,7 +525,7 @@ def get_cdxgen_excludes(includes: List[str], comp_only: bool, allow_new_versions
                 'externalReferences': 'components.[].externalReferences',
                 'externalreferences': 'components.[].externalReferences'}
     if comp_only:
-        excludes |= {'services': 'services', 'dependencies': 'dependencies'}
+        excludes |= {'services': 'services', 'dependencies': 'dependencies', 'vulnerabilities': 'vulnerabilities'}
     if allow_new_data:
         component_keys = []
         service_keys = []
@@ -398,16 +555,17 @@ def import_bom_dependency(data: Dict, allow_new_versions: bool) -> Tuple[str, Li
 def import_bom_dict(
         options: Options, data: Dict, metadata: Dict | List,
         components: List | None = None, services: List | None = None,
-        dependencies: List | None = None) -> Tuple[FlatDicts, List, List, List]:
+        dependencies: List | None = None, vulnerabilities: List | None = None
+) -> Tuple[FlatDicts, List, List, List, List]:
+    if data and any((components, services, dependencies)):
+        logger.warning("Both source dict and a list element included. Using source dict.")
     if data:
-        metadata, components, services, dependencies = parse_bom_dict(data, options)
-    if not components:
-        components = []
-    if not services:
-        services = []
-    if not dependencies:
-        dependencies = []
-    return FlatDicts(metadata), components, services, dependencies  # type: ignore
+        metadata, components, services, dependencies, vulnerabilities = parse_bom_dict(data, options)
+    for i, value in enumerate(elements := [components, services, dependencies, vulnerabilities]):
+        if not value:
+            elements[i] = []
+    components, services, dependencies, vulnerabilities = elements
+    return FlatDicts(metadata), components, services, dependencies, vulnerabilities  # type: ignore
 
 
 def import_config(config: str) -> Dict:
@@ -430,10 +588,11 @@ def import_flat_dict(data: Dict | List) -> List[FlatElement]:
     return flat_dicts
 
 
-def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, List]:
-    metadata = []
+def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, List, List]:
+    metadata: List = []
     services: List = []
     dependencies: List = []
+    vulnerabilities: List = []
     components = [
         BomComponent(i, options)
         for i in data.get("components", [])
@@ -441,11 +600,14 @@ def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, Li
     if not options.comp_only:
         services.extend(BomService(i, options) for i in data.get("services", []))
         dependencies.extend(BomDependency(i, options) for i in data.get("dependencies", []))
+        # vulnerabilities.extend(VDR(data=i, options=options) for i in data.get("vulnerabilties", []))
+        for i in data.get("vulnerabilities", []):
+            vulnerabilities.append(VDR(data=i, options=options))
         for key, value in data.items():
-            if key not in {"components", "dependencies", "services"}:
+            if key not in {"components", "dependencies", "services", "vulnerabilities"}:
                 ele = FlatElement(key, value)
                 metadata.append(ele)
-    return metadata, components, services, dependencies
+    return metadata, components, services, dependencies, vulnerabilities
 
 
 def set_version(version: str, allow_new_versions: bool = False) -> semver.Version | str:

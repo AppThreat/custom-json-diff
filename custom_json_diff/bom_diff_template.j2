@@ -11,7 +11,7 @@
 
         .table_summary2 {
             display: grid;
-            grid-template-columns: 25% 23% 2% 25% 25%;
+            grid-template-columns: 10% 25% 4% 51% 10%;
         }
 
         th, td {
@@ -96,7 +96,7 @@
                 <th style="text-align: center; width: 46%">{{ bom_1 }}</th>
                 <th style="text-align: center; width: 46%">{{ bom_2 }}</th>
             </tr>
-            {% if not (diff_apps_1 or diff_apps_2 or diff_frameworks_1 or diff_frameworks_2 or diff_lib_1 or diff_lib_2 or diff_other_1 or diff_other_2) %}
+            {% if not (diff_apps_1 or diff_apps_2 or diff_frameworks_1 or diff_frameworks_2 or diff_lib_1 or diff_lib_2 or diff_other_1 or diff_other_2 or diff_vdrs_1 or diff_vdrs_2) %}
                 <tr>
                     <td colspan="3" style="text-align: center">No differences found.</td>
                 </tr>
@@ -385,6 +385,36 @@
                         {% endfor %}</td>
                     </tr>
                 {% endif %}
+                {% if diff_vdrs_1 or diff_vdrs_2 %}
+                    <tr>
+                        <th>vulnerabilities<br><br>{{ diff_vdrs_1 | length }}
+                            vs {{ diff_vdrs_2 | length }}</th>
+                        <td>{% for item in diff_vdrs_1 %}
+                            <details>
+                                <summary>{{ item['bom-ref'] }}</summary>
+                                <ul>
+                                    {% for key, value in item|items %}
+                                        {% if value != "" %}
+                                            <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </details>
+                        {% endfor %}</td>
+                        <td>{% for item in diff_vdrs_2 %}
+                            <details>
+                                <summary>{{ item['bom-ref'] }}</summary>
+                                <ul>
+                                    {% for key, value in item|items %}
+                                        {% if value != "" %}
+                                            <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </details>
+                        {% endfor %}</td>
+                    </tr>
+                {% endif %}
             {% endif %}
         </table>
     </div>
@@ -564,6 +594,23 @@
                                     {% endif %}
                                 </ul>
 
+                            </details>
+                        {% endfor %}</td>
+                    </tr>
+                {% endif %}
+                {% if common_vdrs %}
+                    <tr>
+                        <th style="width: 8%">vulnerabilities</th>
+                        <td style="width: 41%">{% for item in common_vdrs %}
+                            <details>
+                                <summary>{{ item['bom-ref'] }}</summary>
+                                <ul>
+                                    {% for key, value in item|items %}
+                                        {% if value != "" %}
+                                            <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
                             </details>
                         {% endfor %}</td>
                     </tr>
