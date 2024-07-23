@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_pcts(diffs: Dict, j1: BomDicts, j2: BomDicts) -> Dict:
-    j1_counts = j1.generate_counts()
-    j2_counts = j2.generate_counts()
+    j1_counts = j1.generate_comp_counts()
+    j2_counts = j2.generate_comp_counts()
     common_counts = generate_counts(diffs["common_summary"])
     result = []
     for key, value in common_counts.items():
@@ -73,6 +73,7 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
         common_deps=diffs["common_summary"].get("dependencies", []),
         common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
         common_other=diffs["common_summary"].get("components", {}).get("other_components", []),
+        common_vdrs=diffs["common_summary"].get("vulnerabilities", []),
         diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("libraries", []),
         diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("libraries", []),
         diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("frameworks", []),
@@ -85,6 +86,8 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
         diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
         diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
         diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
+        diff_vdrs_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
+        diff_vdrs_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
         bom_1=options.file_1,
         bom_2=options.file_2,
         stats=stats_summary,
@@ -109,10 +112,12 @@ def filter_dict(data: Dict, options: Options) -> FlatDicts:
 
 def generate_counts(data: Dict) -> Dict:
     return {"libraries": len(data.get("components", {}).get("libraries", [])),
-              "frameworks": len(data.get("components", {}).get("frameworks", [])),
-              "applications": len(data.get("components", {}).get("applications", [])),
-              "other_components": len(data.get("components", {}).get("other_components", [])),
-              "services": len(data.get("services", [])), "dependencies": len(data.get("dependencies", []))}
+            "frameworks": len(data.get("components", {}).get("frameworks", [])),
+            "applications": len(data.get("components", {}).get("applications", [])),
+            "other_components": len(data.get("components", {}).get("other_components", [])),
+            "services": len(data.get("services", [])),
+            "dependencies": len(data.get("dependencies", [])),
+            "vulnerabilities": len(data.get("vulnerabilities", []))}
 
 
 def get_diff(j1: FlatDicts, j2: FlatDicts, options: Options) -> Dict:
@@ -154,13 +159,16 @@ def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
     return deps
 
 
-def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Dict:
+def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Tuple[int, Dict]:
     output = (bom_1.intersection(bom_2, "common_summary")).to_summary()
-    output |= {
-        "diff_summary": (bom_1 - bom_2).to_summary()
-    }
-    output["diff_summary"] |= (bom_2 - bom_1).to_summary()
-    return output
+    summary_1 = (bom_1 - bom_2).to_summary()
+    summary_2 = (bom_2 - bom_1).to_summary()
+    output["diff_summary"] = summary_1
+    output["diff_summary"] |= summary_2
+    status = 0
+    if summary_1 or summary_2:
+        status = 1
+    return status, output
 
 
 def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts | None = None, j2: BomDicts | None = None) -> None:
