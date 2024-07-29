@@ -7,7 +7,7 @@ from copy import deepcopy
 from typing import Dict, List, Set, Tuple
 
 from jinja2 import Environment
-from json_flatten import flatten, unflatten  # type: ignore
+from json_flatten import flatten  # type: ignore
 
 from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts, Options
 
@@ -40,8 +40,7 @@ def compare_dicts(options: Options) -> Tuple[int, FlatDicts | BomDicts, FlatDict
     json_2_data = load_json(options.file_2, options2)
     if json_1_data == json_2_data:
         return 0, json_1_data, json_2_data
-    else:
-        return 1, json_1_data, json_2_data
+    return 1, json_1_data, json_2_data
 
 
 def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, options: Options) -> None:
@@ -180,7 +179,7 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts | No
     if not options.output:
         logger.warning("No output file specified. No reports generated.")
         return
-    elif options.bom_diff:
+    if options.bom_diff:
         report_file = options.output.replace(".json", "") + ".html"
         export_html_report(report_file, diffs, j1, j2, options)  # type: ignore
 
@@ -210,7 +209,7 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
 
 
 def summarize_diffs(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:
-    for key, value in diff_counts.items():
+    for key in diff_counts.keys():
         if bom_counts[key] != 0:
             found = bom_counts[key] - common_counts.get(key, 0)
             if result.get(key):
