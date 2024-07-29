@@ -97,13 +97,16 @@ dependencies
 vulnerabilities
 - advisories
 - affects
+- analysis
 - bom-ref
 - cwes
 - description
 - detail
 - id
+- properties
 - published
 - ratings
+- recommendation
 - references
 - source
 - updated
