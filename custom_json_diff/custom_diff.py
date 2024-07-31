@@ -159,12 +159,12 @@ def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
 
 
 def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Tuple[int, Dict]:
-    status_1, output = (bom_1.intersection(bom_2, "common_summary")).to_summary()
-    status_2, summary_1 = (bom_1 - bom_2).to_summary()
-    status_3, summary_2 = (bom_2 - bom_1).to_summary()
+    _, output = (bom_1.intersection(bom_2, "common_summary")).to_summary()
+    status_1, summary_1 = (bom_1 - bom_2).to_summary()
+    status_2, summary_2 = (bom_2 - bom_1).to_summary()
     output["diff_summary"] = summary_1
     output["diff_summary"] |= summary_2
-    return max(status_1, status_2, status_3), output
+    return max(status_1, status_2), output
 
 
 def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts | None = None, j2: BomDicts | None = None) -> None:
