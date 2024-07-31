@@ -300,7 +300,7 @@ class BomVdrAffects:
             return True
         a1, a2 = order_boms(self, other)
         if self.options.allow_new_data and self.options.allow_new_versions:
-            if a1.bom_ref and not compare_bom_refs(a1.ref, a2.ref):
+            if a1.ref and not compare_bom_refs(a1.ref, a2.ref):
                 return False
             if a1.versions and not advanced_eq_lists(a1.versions, a2.versions):
                 return False
