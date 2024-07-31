@@ -128,7 +128,6 @@ def main():
         report_template=args.report_template,
     )
     result, j1, j2 = compare_dicts(options)
-
     if args.bom_diff:
         result, result_summary = perform_bom_diff(j1, j2)
     else:

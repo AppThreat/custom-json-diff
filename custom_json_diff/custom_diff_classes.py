@@ -160,7 +160,7 @@ class BomDicts:
                 "services": len(self.services), "dependencies": len(self.dependencies),
                 "vulnerabilities": len(self.vdrs)}
 
-    def to_summary(self) -> Dict:
+    def to_summary(self) -> Tuple[int, Dict]:
         summary: Dict = {self.filename: {}}
         if self.components:
             summary[self.filename] = {"components": {
@@ -183,7 +183,8 @@ class BomDicts:
                     i.original_data for i in self.dependencies]}
             if self.vdrs:
                 summary[self.filename] |= {"vulnerabilities": [i.data for i in self.vdrs]}
-        return summary
+        status = any((self.components, self.vdrs, self.services, self.dependencies, self.data))
+        return int(status), summary
 
 
 class BomService:
@@ -536,9 +537,7 @@ def eq_allow_new_data_vdr(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
         return False
     if vdr_1.references and not advanced_eq_lists(vdr_1.references, vdr_2.references):
         return False
-    if vdr_1.source and vdr_1.source != vdr_2.source:
-        return False
-    return True
+    return not vdr_1.source or vdr_1.source == vdr_2.source
 
 
 def check_key(key: str, exclude_keys: Set[str] | List[str]) -> bool:
@@ -599,7 +598,7 @@ def import_bom_dict(
         components: List | None = None, services: List | None = None,
         dependencies: List | None = None, vulnerabilities: List | None = None
 ) -> Tuple[FlatDicts, List, List, List, List]:
-    if data and any((components, services, dependencies)):
+    if data and any((components, services, dependencies, metadata)):
         logger.warning("Both source dict and a list element included. Using source dict.")
     if data:
         metadata, components, services, dependencies, vulnerabilities = parse_bom_dict(data, options)
