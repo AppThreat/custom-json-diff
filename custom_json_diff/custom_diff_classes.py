@@ -646,7 +646,7 @@ def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, Li
     if not options.comp_only:
         services.extend(BomService(i, options) for i in data.get("services", []))
         dependencies.extend(BomDependency(i, options) for i in data.get("dependencies", []))
-        vulnerabilities.extend(BomVdr(data=i, options=options) for i in data.get("vulnerabilties", []))
+        vulnerabilities.extend(BomVdr(data=i, options=options) for i in data.get("vulnerabilities", []))
         for key, value in data.items():
             if key not in {"components", "dependencies", "services", "vulnerabilities"}:
                 ele = FlatElement(key, value)
