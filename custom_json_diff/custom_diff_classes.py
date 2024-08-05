@@ -454,7 +454,7 @@ def compare_date(dt1: str, dt2: str, comparator: str):
 
 def compare_vdr_new_versions(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
     return all((vdr_1.affects == vdr_2.affects,
-               compare_date(vdr_1.updated, vdr_2.updated, "<"),
+                (not vdr_1.updated or compare_date(vdr_1.updated, vdr_2.updated, "<=")),
                 compare_bom_refs(vdr_1.bom_ref, vdr_2.bom_ref)))
 
 

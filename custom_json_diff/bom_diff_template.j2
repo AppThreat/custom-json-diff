@@ -96,7 +96,7 @@
                 <th style="text-align: center; width: 46%">{{ bom_1 }}</th>
                 <th style="text-align: center; width: 46%">{{ bom_2 }}</th>
             </tr>
-            {% if not (diff_apps_1 or diff_apps_2 or diff_frameworks_1 or diff_frameworks_2 or diff_lib_1 or diff_lib_2 or diff_other_1 or diff_other_2 or diff_vdrs_1 or diff_vdrs_2) %}
+            {% if diff_status == 0 %}
                 <tr>
                     <td colspan="3" style="text-align: center">No differences found.</td>
                 </tr>
@@ -432,7 +432,7 @@
                     Components
                 </th>
             </tr>
-            {% if not (common_apps or common_frameworks or common_lib or common_other) %}
+            {% if not (common_apps or common_frameworks or common_lib or common_other or common_services or common_deps or common_vdrs) %}
                 <tr>
                     <td colspan="2" style="text-align: center">No commonalities.</td>
                 </tr>

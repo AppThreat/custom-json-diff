@@ -43,7 +43,7 @@ def compare_dicts(options: Options) -> Tuple[int, FlatDicts | BomDicts, FlatDict
     return 1, json_1_data, json_2_data
 
 
-def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, options: Options) -> None:
+def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, options: Options, status: int) -> None:
     if options.report_template:
         template_file = options.report_template
     else:
@@ -92,6 +92,7 @@ def export_html_report(outfile: str, diffs: Dict, j1: BomDicts, j2: BomDicts, op
         stats=stats_summary,
         comp_only=options.comp_only,
         metadata=metadata_results,
+        diff_status=status,
     )
     with open(outfile, "w", encoding="utf-8") as f:
         f.write(report_result)
@@ -178,7 +179,7 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts | No
         return
     if options.bom_diff:
         report_file = options.output.replace(".json", "") + ".html"
-        export_html_report(report_file, diffs, j1, j2, options)  # type: ignore
+        export_html_report(report_file, diffs, j1, j2, options, status)  # type: ignore
 
 
 def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
