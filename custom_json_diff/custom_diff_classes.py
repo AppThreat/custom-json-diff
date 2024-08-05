@@ -432,11 +432,11 @@ def compare_bom_refs(v1: str, v2: str) -> bool:
 
 def compare_date(dt1: str, dt2: str, comparator: str):
     """Compares two dates"""
-    if dt1 == dt2 or (not dt1 and not dt2):
+    if not dt1 and not dt2:
         return True
     try:
-        date_1 = datetime.fromisoformat(dt1)
-        date_2 = datetime.fromisoformat(dt2)
+        date_1 = datetime.fromisoformat(dt1).date()
+        date_2 = datetime.fromisoformat(dt2).date()
         match comparator:
             case "<":
                 return date_1 < date_2
