@@ -147,7 +147,7 @@ def load_json(json_file: str, options: Options) -> FlatDicts | BomDicts:
         logger.error("Invalid JSON: %s", json_file)
         sys.exit(1)
     if options.bom_diff:
-        data = sort_dict_lists(data, ["url", "content", "ref", "name", "value"])
+        data = sort_dict_lists(data, ["bom-ref", "id", "url", "content", "ref", "name", "value"])
         data = filter_dict(data, options).to_dict(unflat=True)
         return BomDicts(options, json_file, data, {})
     return filter_dict(data, options)
