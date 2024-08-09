@@ -394,8 +394,32 @@
                                 <summary>{{ item['bom-ref'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" %}
+                                        {% if value and key not in ["advisories","affects","analysis","cwes","properties","ratings","references"] %}
                                             <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                        {% if key in ["advisories","affects","cwes","properties","ratings","references"] and value|length > 0 %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for i in value %}
+                                                            <li>{{ i }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "analysis" and value|length > 0 %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for a,b in value|items %}
+                                                            <li>{{ a }}: {{ b }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
                                         {% endif %}
                                     {% endfor %}
                                 </ul>
@@ -406,8 +430,32 @@
                                 <summary>{{ item['bom-ref'] }}</summary>
                                 <ul>
                                     {% for key, value in item|items %}
-                                        {% if value != "" %}
+                                        {% if value and key not in ["advisories","affects","analysis","cwes","properties","ratings","references"] %}
                                             <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                        {% if key in ["advisories","affects","cwes","properties","ratings","references"] and value|length > 0 %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for i in value %}
+                                                            <li>{{ i }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "analysis" and value|length > 0 %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for a,b in value|items %}
+                                                            <li>{{ a }}: {{ b }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
                                         {% endif %}
                                     {% endfor %}
                                 </ul>
