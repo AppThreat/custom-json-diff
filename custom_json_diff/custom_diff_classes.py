@@ -1,6 +1,8 @@
+import contextlib
 import logging
 import re
 import sys
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Set, Tuple
@@ -60,6 +62,7 @@ class BomDependency:
     def __init__(self, dep: Dict, options: "Options"):
         self.ref, self.deps = import_bom_dependency(dep, options.allow_new_versions)
         self.original_data = {"ref": self.ref, "dependsOn": self.deps}
+        self.options = options
 
     def __eq__(self, other):
         return self.ref == other.ref and self.deps == other.deps
@@ -87,22 +90,31 @@ class BomDicts:
         return not self == other
 
     def __sub__(self, other):
-        data = other.data - self.data
-        components = []
-        services = []
-        dependencies = []
-        vulnerabilities = []
+        data = self.data - other.data
+        components = self.components
+        services = self.services
+        dependencies = self.dependencies
+        vulnerabilities = self.vdrs
+        if other.filename == "common_summary":
+            other.options.bom_num = 2
+            self.options.bom_num = 1
         if other.components:
-            components = [i for i in other.components if i not in self.components]
+            components = [i for i in self.components if i not in other.components]
         if other.services:
-            services = [i for i in other.services if i not in self.services]
+            services = [i for i in self.services if i not in other.services]
         if other.dependencies:
-            dependencies = [i for i in other.dependencies if i not in self.dependencies]
+            dependencies = [i for i in self.dependencies if i not in other.dependencies]
         if other.vdrs:
-            vulnerabilities = [i for i in other.vdrs if i not in self.vdrs]
+            vulnerabilities = [i for i in self.vdrs if i not in other.vdrs]
+        # if other.filename == "common_summary":
+        filename = self.filename
+        options = deepcopy(self.options)
+        # else:
+        #     filename = other.filename
+        #     options = deepcopy(other.options)
         new_bom_dict = BomDicts(
-            other.options,
-            other.filename,
+            options,
+            filename,
             {},
             {},
             components=components,
@@ -120,16 +132,17 @@ class BomDicts:
         services = []
         dependencies = []
         vulnerabilities = []
-        if self.components:
-            components = [i for i in other.components if i in self.components]
-        if self.services:
-            services = [i for i in other.services if i in self.services]
-        if self.dependencies:
-            dependencies = [i for i in other.dependencies if i in self.dependencies]
-        if self.vdrs:
-            vulnerabilities = [i for i in other.vdrs if i in self.vdrs]
+        if self.components and other.components:
+            components = [i for i in self.components if i in other.components]
+        if self.services and other.services:
+            services = [i for i in self.services if i in other.services]
+        if self.dependencies and other.dependencies:
+            dependencies = [i for i in self.dependencies if i in other.dependencies]
+        if self.vdrs and other.vdrs:
+            vulnerabilities = [i for i in self.vdrs if i in other.vdrs]
+        options = deepcopy(self.options)
         new_bom_dict = BomDicts(
-            other.options,
+            options,
             title or other.filename,
             {},
             {},
@@ -182,14 +195,16 @@ class BomDicts:
                 summary[self.filename] |= {"dependencies": [
                     i.original_data for i in self.dependencies]}
             if self.vdrs:
-                summary[self.filename] |= {"vulnerabilities": [i.data for i in self.vdrs]}
-        status = any((self.components, self.vdrs, self.services, self.dependencies, self.data))
-        return int(status), summary
+                summary[self.filename] |= {"vulnerabilities": [i.export() for i in self.vdrs]}
+        status = 3 if any((self.components, self.vdrs, self.services, self.dependencies)) else 0
+        if status == 0 and self.data.data:
+            status = 2
+        return status, summary
 
 
 class BomService:
     def __init__(self, svc: Dict, options: "Options"):
-        self.search_key = "" if options.allow_new_data else create_comp_key(svc, options.svc_keys)
+        self.search_key = create_comp_key(svc, options.svc_keys)
         self.original_data = svc
         self.name = svc.get("name", "")
         self.endpoints = svc.get("endpoints", [])
@@ -212,7 +227,7 @@ class BomVdr:
     affects: List = field(default_factory=list)
     analysis: Dict = field(default_factory=dict)
     cwes: List = field(default_factory=list)
-    data: Dict = field(default_factory=dict)
+    _data: Dict = field(default_factory=dict)
     description: str = ""
     detail: str = ""
     properties: List = field(default_factory=list)
@@ -286,6 +301,29 @@ class BomVdr:
         options = self.options
         self.__init__()
         self.options = options
+    
+    def export(self):
+        return {
+            "id": self.id,
+            "bom-ref": self.bom_ref,
+            "advisories": self.advisories, 
+            "affects": [i.export() for i in self.affects],
+            "analysis": self.analysis,
+            "cwes": self.cwes,
+            "description": self.description,
+            "detail": self.detail,
+            "properties": self.properties,
+            "published": self.published,
+            "ratings": self.ratings,
+            "recommendation": self.recommendation,
+            "references": self.references,
+            "source": self.source, 
+            "updated": self.updated,
+        }
+    
+    @property
+    def data(self):
+        return self._data or self.export()
 
 
 class BomVdrAffects:
@@ -430,6 +468,16 @@ def compare_bom_refs(v1: str, v2: str) -> bool:
     return v1 == v2
 
 
+def compare_recommendations(v1: str, v2: str):
+    rec_1 = v1.split("version ")[-1].rstrip(".")
+    rec_2 = v2.split("version ")[-1].rstrip(".")
+    with contextlib.suppress(TypeError, ValueError):
+        semver1 = semver.parse_version_info(rec_1)
+        semver2 = semver.parse_version_info(rec_2)
+        return semver1 <= semver2
+    return rec_1 <= rec_2
+
+
 def compare_date(dt1: str, dt2: str, comparator: str):
     """Compares two dates"""
     if not dt1 and not dt2:
@@ -454,6 +502,7 @@ def compare_date(dt1: str, dt2: str, comparator: str):
 
 def compare_vdr_new_versions(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
     return all((vdr_1.affects == vdr_2.affects,
+                compare_recommendations(vdr_1.recommendation, vdr_2.recommendation),
                 (not vdr_1.updated or compare_date(vdr_1.updated, vdr_2.updated, "<=")),
                 compare_bom_refs(vdr_1.bom_ref, vdr_2.bom_ref)))
 
@@ -512,8 +561,12 @@ def eq_allow_new_data_vdr(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
         if vdr_1.bom_ref and vdr_1.bom_ref != vdr_2.bom_ref and not compare_bom_refs(
                 vdr_1.bom_ref, vdr_2.bom_ref):
             return False
+        if vdr_1.recommendation and vdr_1.recommendation != vdr_2.recommendation and not compare_recommendations(vdr_1.recommendation, vdr_2.recommendation):
+            return False
     else:
         if vdr_1.bom_ref and vdr_1.bom_ref != vdr_2.bom_ref:
+            return False
+        if vdr_1.recommendation and vdr_1.recommendation != vdr_2.recommendation:
             return False
         if vdr_1.updated and vdr_1.updated != vdr_2.updated:
             return False
@@ -532,8 +585,6 @@ def eq_allow_new_data_vdr(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
     if vdr_1.published and vdr_1.published != vdr_2.published:
         return False
     if vdr_1.ratings and not advanced_eq_lists(vdr_1.ratings, vdr_2.ratings):
-        return False
-    if vdr_1.recommendation and vdr_1.recommendation != vdr_2.recommendation:
         return False
     if vdr_1.references and not advanced_eq_lists(vdr_1.references, vdr_2.references):
         return False
@@ -646,7 +697,7 @@ def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, Li
     if not options.comp_only:
         services.extend(BomService(i, options) for i in data.get("services", []))
         dependencies.extend(BomDependency(i, options) for i in data.get("dependencies", []))
-        vulnerabilities.extend(BomVdr(data=i, options=options) for i in data.get("vulnerabilities", []))
+        vulnerabilities.extend(BomVdr(_data=i, options=options) for i in data.get("vulnerabilities", []))
         for key, value in data.items():
             if key not in {"components", "dependencies", "services", "vulnerabilities"}:
                 ele = FlatElement(key, value)
