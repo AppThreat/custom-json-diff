@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from typing import Dict, List, TYPE_CHECKING
 
 import packageurl
@@ -43,37 +43,44 @@ def compare_date(dt1: str, dt2: str, comparator: str):
     """Compares two dates"""
     if not dt1 and not dt2:
         return True
+    elif not dt1 or not dt2:
+        return False
     try:
         date_1 = datetime.fromisoformat(dt1).date()
         date_2 = datetime.fromisoformat(dt2).date()
-        match comparator:
-            case "<":
-                result = date_1 < date_2
-            case ">":
-                result = date_1 > date_2
-            case "<=":
-                result = date_1 <= date_2
-            case ">=":
-                result = date_1 >= date_2
-            case _:
-                result = date_1 == date_2
+        return compare_generic(date_1, date_2, comparator)
     except ValueError:
         return False
-    return result
+
+
+def compare_generic(version_1: str | date | semver.Version, version_2: str | date | semver.Version, comparator):
+    match comparator:
+        case "<":
+            return version_1 < version_2  #type: ignore
+        case ">":
+            return version_1 > version_2  #type: ignore
+        case "<=":
+            return version_1 <= version_2  #type: ignore
+        case ">=":
+            return version_1 >= version_2  #type: ignore
+        case _:
+            return version_1 == version_2  #type: ignore
 
 
 def compare_recommendations(v1: str, v2: str, comparator: str):
-    if v1 == v2:
-        return True
     m1 = recommendation_regex.search(v1)
     m2 = recommendation_regex.search(v2)
     if m1 and m2:
         return compare_versions(m1["version"], m2["version"], comparator)
     logger.debug("Could not parse one or more of these recommendations: %s, %s", v1, v2)
-    return False
+    return v1 == v2
 
 
 def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
+    if not v1 and not v2:
+        return True
+    elif not v1 or not v2:
+        return False
     v1 = v1.lstrip("v").rstrip(".") if v1 else ""
     v2 = v2.lstrip("v").rstrip(".") if v2 else ""
     try:
@@ -85,17 +92,7 @@ def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
     except TypeError:
         logger.debug("Could not parse one or more of these versions: %s, %s", v1, v2)
         return False
-    match comparator:
-        case "<":
-            return version_1 < version_2
-        case ">":
-            return version_1 > version_2
-        case "<=":
-            return version_1 <= version_2
-        case ">=":
-            return version_1 >= version_2
-        case _:
-            return version_1 == version_2
+    return compare_generic(version_1, version_2, comparator)  #type: ignore
 
 
 def export_html_report(outfile: str, diffs: Dict, options: "Options", status: int,
