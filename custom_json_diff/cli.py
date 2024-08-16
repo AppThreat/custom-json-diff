@@ -3,8 +3,12 @@ import logging
 
 from importlib.metadata import version
 
-from custom_json_diff.custom_diff import (compare_dicts, get_diff, perform_bom_diff,
-                                          report_results)
+from custom_json_diff.custom_diff import (
+    compare_dicts,
+    get_diff,
+    perform_bom_diff,
+    report_results
+)
 from custom_json_diff.custom_diff_classes import Options
 
 

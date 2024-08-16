@@ -5,7 +5,7 @@ import pytest
 
 from custom_json_diff.custom_diff import compare_dicts, perform_bom_diff
 from custom_json_diff.custom_diff_classes import (
-    BomComponent, BomDicts, Options, BomVdr, BomVdrAffects
+    BomComponent, BomDicts, FlatDicts, Options, BomVdr, BomVdrAffects
 )
 
 
@@ -33,7 +33,7 @@ def options_4():
 def bom_dicts_1():
     options = Options(file_1="bom_1.json", file_2="bom_2.json",
                       bom_diff=True, allow_new_data=True)
-    bom_dicts = BomDicts(options, "bom_1.json", {}, {})
+    bom_dicts = BomDicts(options, "bom_1.json", {}, FlatDicts({}), [])
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.0.0"
                    ".RELEASE?type=jar",
@@ -54,7 +54,7 @@ def bom_dicts_1():
 def bom_dicts_2():
     options = Options(file_1="bom_1.json", file_2="bom_2.json",
                       bom_diff=True, allow_new_data=True)
-    bom_dicts = BomDicts(options, "bom_2.json", {}, {})
+    bom_dicts = BomDicts(options, "bom_2.json", {}, FlatDicts({}), [])
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.0.0"
                    ".RELEASE?type=jar",
@@ -74,7 +74,7 @@ def bom_dicts_2():
 @pytest.fixture
 def bom_dicts_3():
     options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, comp_only=True)
-    bom_dicts = BomDicts(options, "bom_1.json", {}, {})
+    bom_dicts = BomDicts(options, "bom_1.json", {}, FlatDicts({}), [])
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.0.0"
                    ".RELEASE?type=jar",
@@ -94,7 +94,7 @@ def bom_dicts_3():
 @pytest.fixture
 def bom_dicts_4():
     options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, comp_only=True)
-    bom_dicts = BomDicts(options, "bom_2.json", {}, {})
+    bom_dicts = BomDicts(options, "bom_2.json", {}, FlatDicts([]))
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.3.0"
                    ".RELEASE?type=jar",

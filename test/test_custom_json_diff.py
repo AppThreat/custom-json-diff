@@ -3,8 +3,9 @@ import json
 import pytest
 
 from custom_json_diff.custom_diff import (
-    compare_dicts, get_diff, load_json, sort_dict_lists
+    compare_dicts, get_diff, load_json
 )
+from custom_json_diff.utils import sort_dict_lists
 from custom_json_diff.custom_diff_classes import Options
 
 

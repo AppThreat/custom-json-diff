@@ -1,22 +1,131 @@
-import contextlib
 import logging
 import re
-import sys
 from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Dict, List, Set, Tuple
 
-import semver
-import toml
 from json_flatten import unflatten  # type: ignore
+
+from custom_json_diff.utils import (
+    compare_bom_refs, compare_date, compare_recommendations, compare_versions, import_config
+)
 
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class Options:  # type: ignore
+    allow_new_data: bool = False
+    allow_new_versions: bool = False
+    bom_diff: bool = False
+    comp_only: bool = False
+    config: str = ""
+    exclude: List = field(default_factory=list)
+    file_1: str = ""
+    file_2: str = ""
+    include: List = field(default_factory=list)
+    output: str = ""
+    report_template: str = ""
+    sort_keys: List = field(default_factory=list)
+    testing: bool = False
+    comp_keys: List = field(default_factory=list)
+    svc_keys: List = field(default_factory=list)
+    bom_num: int = 1
+
+    def __post_init__(self):
+        if self.testing:
+            self.exclude, self.comp_keys, self.svc_keys, self.do_advanced = get_cdxgen_excludes(
+                self.include, self.comp_only, self.allow_new_versions, self.allow_new_data)
+            self.sort_keys = ["url", "content", "ref", "name", "value", "location"]
+        elif self.config:
+            toml_data = import_config(self.config)
+            self.allow_new_versions = toml_data.get("bom_diff", {}).get(
+                "allow_new_versions", False)
+            self.allow_new_data = toml_data.get("bom_diff", {}).get("allow_new_data", False)
+            self.report_template = toml_data.get("bom_diff", {}).get("report_template", "")
+            self.sort_keys = toml_data.get("settings", {}).get("sort_keys", [])
+            self.exclude = toml_data.get("settings", {}).get("excluded_fields", [])
+            self.include = toml_data.get("settings", {}).get("include_extra", [])
+            self.comp_only = toml_data.get("bom_diff", {}).get("components_only", False)
+        if self.bom_diff:
+            tmp_exclude, tmp_bom_key_fields, tmp_service_key_fields, self.do_advanced = (
+                get_cdxgen_excludes(
+                    self.include, self.comp_only, self.allow_new_versions, self.allow_new_data))
+            self.comp_keys.extend(tmp_bom_key_fields)
+            self.svc_keys.extend(tmp_service_key_fields)
+            self.exclude.extend(tmp_exclude)
+            self.sort_keys.extend(["purl", "bom-ref", "content", "cve", "id", "url", "text", "ref", "name", "value", "location"])
+        self.exclude = list(set(self.exclude))
+        self.include = list(set(self.include))
+        self.comp_keys = list(set(self.comp_keys))
+        self.svc_keys = list(set(self.svc_keys))
+
+
+class FlatDicts:
+
+    def __init__(self, elements: Dict | List):
+        self.data = import_flat_dict(elements)
+
+    def __eq__(self, other) -> bool:
+        return all(i in other.data for i in self.data) and all(i in self.data for i in other.data)
+
+    def __ne__(self, other) -> bool:
+        return not self == other
+
+    def __iadd__(self, other):
+        to_add = [i for i in other.data if i not in self.data]
+        self.data.extend(to_add)
+        return self
+
+    def __isub__(self, other):
+        kept_items = [i for i in self.data if i not in other.data]
+        self.data = kept_items
+        return self
+
+    def __add__(self, other):
+        to_add = self.data
+        for i in other.data:
+            if i not in self.data:
+                to_add.append(i)
+        return FlatDicts(to_add)
+
+    def __sub__(self, other):
+        to_add = [i for i in self.data if i not in other.data]
+        return FlatDicts(to_add)
+
+    def to_dict(self, unflat: bool = False) -> Dict:
+        result = {i.key: i.value for i in self.data}
+        if unflat:
+            result = unflatten(result)
+        return result
+
+    def intersection(self, other: "FlatDicts") -> "FlatDicts":
+        """Returns the intersection of two FlatDicts as a new FlatDicts"""
+        intersection = [i for i in self.data if i in other.data]
+        return FlatDicts(intersection)
+
+    def filter_out_keys(self, exclude_keys: Set[str] | List[str]) -> "FlatDicts":
+        filtered_data = [i for i in self.data if check_key(i.search_key, exclude_keys)]
+        self.data = filtered_data
+        return self
+
+
+class FlatElement:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+        self.search_key = create_search_key(key, value)
+
+    def __eq__(self, other):
+        return self.search_key == other.search_key
+
+    def to_dict(self):
+        return {self.key: self.value}
+
+
 class BomComponent:
-    def __init__(self, comp: Dict, options: "Options"):
+    def __init__(self, comp: Dict, options: Options):
         self.author = comp.get("author", "")
         self.bom_ref = comp.get("bom-ref", "")
         self.component_type = comp.get("type", "")
@@ -34,7 +143,7 @@ class BomComponent:
         self.purl = comp.get("purl", "")
         self.scope = comp.get("scope", [])
         self.search_key = "" if options.allow_new_data else create_comp_key(comp, options.comp_keys)
-        self.version = set_version(comp.get("version", ""), options.allow_new_versions)
+        self.version = comp.get("version", "")
 
     def __eq__(self, other):
         c1, c2 = order_boms(self, other)
@@ -42,8 +151,8 @@ class BomComponent:
             return eq_allow_new_data_comp(c1, c2)
         if self.options.allow_new_versions:
             return all((
-                c1.version <= c2.version, self._check_list_eq(other),
-                compare_bom_refs(c1.bom_ref, c2.bom_ref), compare_bom_refs(c1.purl, c2.purl)
+                compare_versions(c1.version, c2.version, "<="), self._check_list_eq(other),
+                compare_bom_refs(c1.bom_ref, c2.bom_ref, "<="), compare_bom_refs(c1.purl, c2.purl, "<=")
             ))
         if self.options.allow_new_data:
             return eq_allow_new_data_comp(c1, c2)
@@ -56,6 +165,14 @@ class BomComponent:
         # Since these elements have been sorted, we can compare them directly
         return (self.properties == other.properties and self.evidence == other.evidence and
                 self.hashes == other.hashes and self.licenses == other.licenses)
+
+    def to_dict(self):
+        return {"author": self.author, "bom-ref": self.bom_ref, "type": self.component_type,
+                "description": self.description, "evidence": self.evidence,
+                "externalReferences": self.external_references, "group": self.group,
+                "hashes": self.hashes, "licenses": self.licenses, "name": self.name,
+                "properties": self.properties, "publisher": self.publisher, "purl": self.purl,
+                "scope": self.scope, "version": self.version}
 
 
 class BomDependency:
@@ -70,19 +187,22 @@ class BomDependency:
     def __ne__(self, other):
         return not self == other
 
+    def to_dict(self):
+        return {"ref": self.ref, "dependsOn": self.deps}
+
 
 class BomDicts:
-    def __init__(self, options: "Options", filename: str, data: Dict, metadata: Dict,
+    def __init__(self, options: "Options", filename: str, original_data: Dict, other_data: FlatDicts | None = None,
                  components: List | None = None, services: List | None = None,
                  dependencies: List | None = None, vulnerabilities: List | None = None):
         self.options = options
         self.options.bom_num = 1 if filename == options.file_1 else 2
-        self.data, self.components, self.services, self.dependencies, self.vdrs = import_bom_dict(
-            self.options, data, metadata, components, services, dependencies, vulnerabilities)
+        self.other_data, self.components, self.services, self.dependencies, self.vdrs = import_bom_dict(
+            self.options, original_data, other_data, components, services, dependencies, vulnerabilities)
         self.filename = filename
 
     def __eq__(self, other):
-        return (self.data == other.data and self.components == other.components and
+        return (self.other_data == other.other_data and self.components == other.components and
                 self.services == other.services and self.dependencies == other.dependencies and
                 self.vdrs == self.vdrs)
 
@@ -90,7 +210,7 @@ class BomDicts:
         return not self == other
 
     def __sub__(self, other):
-        data = self.data - other.data
+        other_data = self.other_data - other.other_data
         components = self.components
         services = self.services
         dependencies = self.dependencies
@@ -106,17 +226,13 @@ class BomDicts:
             dependencies = [i for i in self.dependencies if i not in other.dependencies]
         if other.vdrs:
             vulnerabilities = [i for i in self.vdrs if i not in other.vdrs]
-        # if other.filename == "common_summary":
         filename = self.filename
         options = deepcopy(self.options)
-        # else:
-        #     filename = other.filename
-        #     options = deepcopy(other.options)
         new_bom_dict = BomDicts(
             options,
             filename,
             {},
-            {},
+            FlatDicts(other_data),
             components=components,
             services=services,
             dependencies=dependencies,
@@ -124,13 +240,13 @@ class BomDicts:
         )
         if new_bom_dict.filename == new_bom_dict.options.file_1:
             new_bom_dict.options.bom_num = 1
-        new_bom_dict.data = data
         return new_bom_dict
 
     def intersection(self, other, title: str = "") -> "BomDicts":
         components = []
-        services = []
         dependencies = []
+        other_data = None
+        services = []
         vulnerabilities = []
         if self.components and other.components:
             components = [i for i in self.components if i in other.components]
@@ -140,18 +256,18 @@ class BomDicts:
             dependencies = [i for i in self.dependencies if i in other.dependencies]
         if self.vdrs and other.vdrs:
             vulnerabilities = [i for i in self.vdrs if i in other.vdrs]
+        other_data = self.other_data.intersection(other.other_data)
         options = deepcopy(self.options)
         new_bom_dict = BomDicts(
             options,
             title or other.filename,
             {},
-            {},
+            other_data=other_data,
             components=components,
             services=services,
             dependencies=dependencies,
             vulnerabilities=vulnerabilities
         )
-        new_bom_dict.data = self.data.intersection(other.data)
         return new_bom_dict
 
     def generate_comp_counts(self) -> Dict:
@@ -177,27 +293,27 @@ class BomDicts:
         summary: Dict = {self.filename: {}}
         if self.components:
             summary[self.filename] = {"components": {
-                "libraries": [i.original_data for i in self.components if
+                "libraries": [i.to_dict() for i in self.components if
                               i.component_type == "library"],
-                "frameworks": [i.original_data for i in self.components if
+                "frameworks": [i.to_dict() for i in self.components if
                                i.component_type == "framework"],
-                "applications": [i.original_data for i in self.components if
+                "applications": [i.to_dict() for i in self.components if
                                  i.component_type == "application"],
-                "other_components": [i.original_data for i in self.components if
+                "other_components": [i.to_dict() for i in self.components if
                                      i.component_type not in (
                                          "library", "framework", "application")], }}
         if not self.options.comp_only:
-            if self.data:
-                summary[self.filename] |= {"misc_data": self.data.to_dict(unflat=True)}
+            if self.other_data:
+                summary[self.filename] |= {"misc_data": self.other_data.to_dict(unflat=True)}
             if self.services:
-                summary[self.filename] |= {"services": [i.original_data for i in self.services]}
+                summary[self.filename] |= {"services": [i.to_dict() for i in self.services]}
             if self.dependencies:
                 summary[self.filename] |= {"dependencies": [
-                    i.original_data for i in self.dependencies]}
+                    i.to_dict() for i in self.dependencies]}
             if self.vdrs:
-                summary[self.filename] |= {"vulnerabilities": [i.export() for i in self.vdrs]}
+                summary[self.filename] |= {"vulnerabilities": [i.to_dict() for i in self.vdrs]}
         status = 3 if any((self.components, self.vdrs, self.services, self.dependencies)) else 0
-        if status == 0 and self.data.data:
+        if status == 0 and self.other_data.data:
             status = 2
         return status, summary
 
@@ -217,6 +333,14 @@ class BomService:
     def __ne__(self, other):
         return not self == other
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "endpoints": self.endpoints,
+            "authenticated": self.authenticated,
+            "x-trust-boundary": self.x_trust_boundary
+        }
+
 
 @dataclass
 class BomVdr:
@@ -227,7 +351,7 @@ class BomVdr:
     affects: List = field(default_factory=list)
     analysis: Dict = field(default_factory=dict)
     cwes: List = field(default_factory=list)
-    _data: Dict = field(default_factory=dict)
+    data: Dict = field(default_factory=dict)
     description: str = ""
     detail: str = ""
     properties: List = field(default_factory=list)
@@ -301,13 +425,13 @@ class BomVdr:
         options = self.options
         self.__init__()
         self.options = options
-    
-    def export(self):
+
+    def to_dict(self):
         return {
             "id": self.id,
             "bom-ref": self.bom_ref,
             "advisories": self.advisories, 
-            "affects": [i.export() for i in self.affects],
+            "affects": [i.to_dict() for i in self.affects],
             "analysis": self.analysis,
             "cwes": self.cwes,
             "description": self.description,
@@ -320,10 +444,6 @@ class BomVdr:
             "source": self.source, 
             "updated": self.updated,
         }
-    
-    @property
-    def data(self):
-        return self._data or self.export()
 
 
 class BomVdrAffects:
@@ -338,173 +458,24 @@ class BomVdrAffects:
             return True
         a1, a2 = order_boms(self, other)
         if self.options.allow_new_data and self.options.allow_new_versions:
-            if a1.ref and not compare_bom_refs(a1.ref, a2.ref):
+            if a1.ref and not compare_bom_refs(a1.ref, a2.ref, "<="):
                 return False
             if a1.versions and not advanced_eq_lists(a1.versions, a2.versions):
                 return False
         elif self.options.allow_new_versions:
-            return compare_bom_refs(a1.ref, a2.ref) and a1.versions == a2.versions
+            return compare_bom_refs(a1.ref, a2.ref, "<=") and advanced_eq_lists(a1.versions, a2.versions)
         return False
 
-
-class FlatDicts:
-
-    def __init__(self, elements: Dict | List):
-        self.data = import_flat_dict(elements)
-
-    def __eq__(self, other) -> bool:
-        return all(i in other.data for i in self.data) and all(i in self.data for i in other.data)
-
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other):
         return not self == other
 
-    def __iadd__(self, other):
-        to_add = [i for i in other.data if i not in self.data]
-        self.data.extend(to_add)
-        return self
-
-    def __isub__(self, other):
-        kept_items = [i for i in self.data if i not in other.data]
-        self.data = kept_items
-        return self
-
-    def __add__(self, other):
-        to_add = self.data
-        for i in other.data:
-            if i not in self.data:
-                to_add.append(i)
-        return FlatDicts(to_add)
-
-    def __sub__(self, other):
-        to_add = [i for i in self.data if i not in other.data]
-        return FlatDicts(to_add)
-
-    def to_dict(self, unflat: bool = False) -> Dict:
-        result = {i.key: i.value for i in self.data}
-        if unflat:
-            result = unflatten(result)
-        return result
-
-    def intersection(self, other: "FlatDicts") -> "FlatDicts":
-        """Returns the intersection of two FlatDicts as a new FlatDicts"""
-        intersection = [i for i in self.data if i in other.data]
-        return FlatDicts(intersection)
-
-    def filter_out_keys(self, exclude_keys: Set[str] | List[str]) -> "FlatDicts":
-        filtered_data = [i for i in self.data if check_key(i.search_key, exclude_keys)]
-        self.data = filtered_data
-        return self
-
-
-class FlatElement:
-    def __init__(self, key, value):
-        self.key = key
-        self.value = value
-        self.search_key = create_search_key(key, value)
-
-    def __eq__(self, other):
-        return self.search_key == other.search_key
-
-
-@dataclass
-class Options:  # type: ignore
-    allow_new_data: bool = False
-    allow_new_versions: bool = False
-    bom_diff: bool = False
-    comp_only: bool = False
-    config: str = ""
-    exclude: List = field(default_factory=list)
-    file_1: str = ""
-    file_2: str = ""
-    include: List = field(default_factory=list)
-    output: str = ""
-    report_template: str = ""
-    sort_keys: List = field(default_factory=list)
-    testing: bool = False
-    comp_keys: List = field(default_factory=list)
-    svc_keys: List = field(default_factory=list)
-    bom_num: int = 1
-
-    def __post_init__(self):
-        if self.testing:
-            self.exclude, self.comp_keys, self.svc_keys, self.do_advanced = get_cdxgen_excludes(
-                self.include, self.comp_only, self.allow_new_versions, self.allow_new_data)
-            self.sort_keys = ["url", "content", "ref", "name", "value", "location"]
-        elif self.config:
-            toml_data = import_config(self.config)
-            self.allow_new_versions = toml_data.get("bom_diff", {}).get(
-                "allow_new_versions", False)
-            self.allow_new_data = toml_data.get("bom_diff", {}).get("allow_new_data", False)
-            self.report_template = toml_data.get("bom_diff", {}).get("report_template", "")
-            self.sort_keys = toml_data.get("settings", {}).get("sort_keys", [])
-            self.exclude = toml_data.get("settings", {}).get("excluded_fields", [])
-            self.include = toml_data.get("settings", {}).get("include_extra", [])
-            self.comp_only = toml_data.get("bom_diff", {}).get("components_only", False)
-        if self.bom_diff:
-            tmp_exclude, tmp_bom_key_fields, tmp_service_key_fields, self.do_advanced = (
-                get_cdxgen_excludes(
-                    self.include, self.comp_only, self.allow_new_versions, self.allow_new_data))
-            self.comp_keys.extend(tmp_bom_key_fields)
-            self.svc_keys.extend(tmp_service_key_fields)
-            self.exclude.extend(tmp_exclude)
-            self.sort_keys.extend(["url", "content", "ref", "name", "value", "location"])
-        self.exclude = list(set(self.exclude))
-        self.include = list(set(self.include))
-        self.comp_keys = list(set(self.comp_keys))
-        self.svc_keys = list(set(self.svc_keys))
+    def to_dict(self):
+        return {"ref": self.ref, "versions": self.versions}
 
 
 def advanced_eq_lists(bom_1: List, bom_2: List) -> bool:
     """Checks that all items in bom_1 are in bom_2 when allow_new_data is True"""
     return False if len(bom_1) > len(bom_2) else all(i in bom_2 for i in bom_1)
-
-
-def compare_bom_refs(v1: str, v2: str) -> bool:
-    """Compares bom-refs allowing new versions"""
-    if "@" in v1 and "@" in v2:
-        v1p, v1v = v1.split("@")
-        v2p, v2v = v2.split("@")
-        return v1p == v2p and v1v <= v2v
-    return v1 == v2
-
-
-def compare_recommendations(v1: str, v2: str):
-    rec_1 = v1.split("version ")[-1].rstrip(".")
-    rec_2 = v2.split("version ")[-1].rstrip(".")
-    with contextlib.suppress(TypeError, ValueError):
-        semver1 = semver.parse_version_info(rec_1)
-        semver2 = semver.parse_version_info(rec_2)
-        return semver1 <= semver2
-    return rec_1 <= rec_2
-
-
-def compare_date(dt1: str, dt2: str, comparator: str):
-    """Compares two dates"""
-    if not dt1 and not dt2:
-        return True
-    try:
-        date_1 = datetime.fromisoformat(dt1).date()
-        date_2 = datetime.fromisoformat(dt2).date()
-        match comparator:
-            case "<":
-                return date_1 < date_2
-            case ">":
-                return date_1 > date_2
-            case "<=":
-                return date_1 <= date_2
-            case ">=":
-                return date_1 >= date_2
-            case _:
-                return date_1 == date_2
-    except ValueError:
-        return False
-
-
-def compare_vdr_new_versions(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
-    return all((vdr_1.affects == vdr_2.affects,
-                compare_recommendations(vdr_1.recommendation, vdr_2.recommendation),
-                (not vdr_1.updated or compare_date(vdr_1.updated, vdr_2.updated, "<=")),
-                compare_bom_refs(vdr_1.bom_ref, vdr_2.bom_ref)))
 
 
 def eq_allow_new_data_comp(bom_1: BomComponent, bom_2: BomComponent) -> bool:
@@ -523,9 +494,9 @@ def eq_allow_new_data_comp(bom_1: BomComponent, bom_2: BomComponent) -> bool:
     if bom_1.options.allow_new_versions:
         if bom_1.version and bom_1.version > bom_2.version:
             return False
-        if bom_1.bom_ref and not compare_bom_refs(bom_1.bom_ref, bom_2.bom_ref):
+        if bom_1.bom_ref and not compare_bom_refs(bom_1.bom_ref, bom_2.bom_ref, "<="):
             return False
-        if bom_1.purl and not compare_bom_refs(bom_1.purl, bom_2.purl):
+        if bom_1.purl and not compare_bom_refs(bom_1.purl, bom_2.purl, "<="):
             return False
     else:
         if bom_1.version and bom_1.version != bom_2.version:
@@ -556,12 +527,12 @@ def eq_allow_new_data_vdr(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
     # Allows allow_new_versions to be used with allow_new_data
     if vdr_1.options.allow_new_versions:  # type: ignore
         if vdr_1.updated and vdr_1.updated != vdr_2.updated and not compare_date(
-                vdr_1.updated, vdr_2.updated, "<"):
+                vdr_1.updated, vdr_2.updated, "<="):
             return False
         if vdr_1.bom_ref and vdr_1.bom_ref != vdr_2.bom_ref and not compare_bom_refs(
-                vdr_1.bom_ref, vdr_2.bom_ref):
+                vdr_1.bom_ref, vdr_2.bom_ref, "<="):
             return False
-        if vdr_1.recommendation and vdr_1.recommendation != vdr_2.recommendation and not compare_recommendations(vdr_1.recommendation, vdr_2.recommendation):
+        if vdr_1.recommendation and vdr_1.recommendation != vdr_2.recommendation and not compare_recommendations(vdr_1.recommendation, vdr_2.recommendation, "<="):
             return False
     else:
         if vdr_1.bom_ref and vdr_1.bom_ref != vdr_2.bom_ref:
@@ -593,6 +564,13 @@ def eq_allow_new_data_vdr(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
 
 def check_key(key: str, exclude_keys: Set[str] | List[str]) -> bool:
     return not any(key.startswith(k) for k in exclude_keys)
+
+
+def compare_vdr_new_versions(vdr_1: BomVdr, vdr_2: BomVdr) -> bool:
+    return all((vdr_1.affects == vdr_2.affects,
+                compare_recommendations(vdr_1.recommendation, vdr_2.recommendation, "<="),
+                (not vdr_1.updated or compare_date(vdr_1.updated, vdr_2.updated, "<=")),
+                compare_bom_refs(vdr_1.bom_ref, vdr_2.bom_ref, "<=")))
 
 
 def create_comp_key(comp: Dict, keys: List[str]) -> str:
@@ -645,33 +623,25 @@ def import_bom_dependency(data: Dict, allow_new_versions: bool) -> Tuple[str, Li
 
 
 def import_bom_dict(
-        options: Options, data: Dict, metadata: Dict | List,
+        options: Options, original_data: Dict, other_data: FlatDicts | None = None,
         components: List | None = None, services: List | None = None,
         dependencies: List | None = None, vulnerabilities: List | None = None
 ) -> Tuple[FlatDicts, List, List, List, List]:
-    if data and any((components, services, dependencies, metadata)):
+    if original_data and any((components, services, dependencies, other_data)):
         logger.warning("Both source dict and a list element included. Using source dict.")
-    if data:
-        metadata, components, services, dependencies, vulnerabilities = parse_bom_dict(data, options)
+    if original_data:
+        other_data, components, services, dependencies, vulnerabilities = parse_bom_dict(original_data, options)
+    elif not other_data:
+        other_data = FlatDicts({})
     for i, value in enumerate(elements := [components, services, dependencies, vulnerabilities]):
         if not value:
             elements[i] = []
     components, services, dependencies, vulnerabilities = elements
-    return FlatDicts(metadata), components, services, dependencies, vulnerabilities  # type: ignore
+    return other_data, components, services, dependencies, vulnerabilities  # type: ignore
 
 
-def import_config(config: str) -> Dict:
-    with open(config, "r", encoding="utf-8") as f:
-        try:
-            toml_data = toml.load(f)
-        except toml.TomlDecodeError:
-            logger.error("Invalid TOML.")
-            sys.exit(1)
-    return toml_data
-
-
-def import_flat_dict(data: Dict | List) -> List[FlatElement]:
-    if isinstance(data, list):
+def import_flat_dict(data: Dict | List[FlatElement]) -> List[FlatElement]:
+    if isinstance(data, List):
         return data
     flat_dicts = []
     for key, value in data.items():
@@ -680,36 +650,25 @@ def import_flat_dict(data: Dict | List) -> List[FlatElement]:
     return flat_dicts
 
 
-def order_boms(bom_1, bom_2) -> Tuple:
-    """Ensures we compare boms in the correct order for allow_new_versions and allow_new_data"""
-    return (bom_1, bom_2) if bom_1.options.bom_num == 1 else (bom_2, bom_1)
-
-
-def parse_bom_dict(data: Dict, options: "Options") -> Tuple[List, List, List, List, List]:
-    metadata: List = []
+def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, List, List, List, List]:
+    other_data: Dict = {}
     services: List = []
     dependencies: List = []
     vulnerabilities: List = []
     components: List = []
-    if not data:
-        return metadata, components, services, dependencies, vulnerabilities
-    components = [BomComponent(i, options) for i in data.get("components", [])]
+    if not original_data:
+        return FlatDicts(other_data), components, services, dependencies, vulnerabilities
+    components = [BomComponent(i, options) for i in original_data.get("components", [])]
     if not options.comp_only:
-        services.extend(BomService(i, options) for i in data.get("services", []))
-        dependencies.extend(BomDependency(i, options) for i in data.get("dependencies", []))
-        vulnerabilities.extend(BomVdr(_data=i, options=options) for i in data.get("vulnerabilities", []))
-        for key, value in data.items():
+        services.extend(BomService(i, options) for i in original_data.get("services", []))
+        dependencies.extend(BomDependency(i, options) for i in original_data.get("dependencies", []))
+        vulnerabilities.extend(BomVdr(data=i, options=options) for i in original_data.get("vulnerabilities", []))
+        for key, value in original_data.items():
             if key not in {"components", "dependencies", "services", "vulnerabilities"}:
-                ele = FlatElement(key, value)
-                metadata.append(ele)
-    return metadata, components, services, dependencies, vulnerabilities
+                other_data |= {key: value}
+    return FlatDicts(other_data), components, services, dependencies, vulnerabilities
 
 
-def set_version(version: str, allow_new_versions: bool = False) -> semver.Version | str:
-    try:
-        if allow_new_versions and version:
-            version = version.lstrip("v").rstrip(".RELEASE")
-            return semver.Version.parse(version, True)
-    except ValueError:
-        logger.debug("Could not parse version: %s", version)
-    return version
+def order_boms(bom_1: BomDicts, bom_2: BomDicts) -> Tuple:
+    """Ensures we compare boms in the correct order for allow_new_versions and allow_new_data"""
+    return (bom_1, bom_2) if bom_1.options.bom_num == 1 else (bom_2, bom_1)
