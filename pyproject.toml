@@ -44,6 +44,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = [
   "custom_json_diff",
+  "custom_json_diff.lib",
   ]
 include-package-data = true
 

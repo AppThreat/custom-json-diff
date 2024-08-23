@@ -12,7 +12,7 @@ import toml
 from jinja2 import Environment
 
 if TYPE_CHECKING:
-    from custom_json_diff.custom_diff_classes import Options
+    from custom_json_diff.lib.custom_diff_classes import Options
 
 
 logger = logging.getLogger(__name__)

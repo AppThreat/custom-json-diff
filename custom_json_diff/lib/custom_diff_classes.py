@@ -6,7 +6,7 @@ from typing import Dict, List, Set, Tuple
 
 from json_flatten import unflatten  # type: ignore
 
-from custom_json_diff.utils import (
+from custom_json_diff.lib.utils import (
     compare_bom_refs, compare_date, compare_recommendations, compare_versions, import_config
 )
 

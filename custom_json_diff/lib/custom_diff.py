@@ -7,13 +7,13 @@ from typing import Dict, List, Set, Tuple, TYPE_CHECKING
 
 from json_flatten import flatten  # type: ignore
 
-from custom_json_diff.custom_diff_classes import BomDicts, FlatDicts, Options, order_boms
-from custom_json_diff.utils import (
+from custom_json_diff.lib.custom_diff_classes import BomDicts, FlatDicts, Options, order_boms
+from custom_json_diff.lib.utils import (
     export_html_report, export_results, logger, sort_dict_lists
 )
 
 if TYPE_CHECKING:
-    from custom_json_diff.custom_diff_classes import (
+    from custom_json_diff.lib.custom_diff_classes import (
         BomComponent, BomDependency, BomService, BomVdr
     )
 

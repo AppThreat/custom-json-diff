@@ -2,11 +2,11 @@ import json
 
 import pytest
 
-from custom_json_diff.custom_diff import (
+from custom_json_diff.lib.custom_diff import (
     compare_dicts, get_diff, load_json
 )
-from custom_json_diff.utils import sort_dict_lists
-from custom_json_diff.custom_diff_classes import Options
+from custom_json_diff.lib.utils import sort_dict_lists
+from custom_json_diff.lib.custom_diff_classes import Options
 
 
 @pytest.fixture
