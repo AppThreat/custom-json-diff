@@ -3,8 +3,8 @@ from copy import deepcopy
 
 import pytest
 
-from custom_json_diff.custom_diff import compare_dicts, perform_bom_diff
-from custom_json_diff.custom_diff_classes import (
+from custom_json_diff.lib.custom_diff import compare_dicts, perform_bom_diff
+from custom_json_diff.lib.custom_diff_classes import (
     BomComponent, BomDicts, FlatDicts, Options, BomVdr, BomVdrAffects
 )
 
