@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-recommendation_regex = re.compile(r"(?P<version>\d\S+.\d\S+\S+)")
+recommendation_regex = re.compile(r"(?P<version>\d\S?.\d\S*)")
 
 
 def compare_bom_refs(v1: str, v2: str, comparator: str = "<=") -> bool:
@@ -135,7 +135,6 @@ def export_html_report(outfile: str, diffs: Dict, options: "Options", status: in
         bom_1=options.file_1,
         bom_2=options.file_2,
         stats=stats_summary,
-        comp_only=options.comp_only,
         metadata=metadata_results,
         diff_status=status,
     )
