@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CSAF Diff Summary</title>
+    <style>
+
+        .table_summary {
+            display: grid;
+            grid-template-columns: 5% 90% 5%;
+        }
+
+        .table_summary2 {
+            display: grid;
+            grid-template-columns: 10% 25% 4% 51% 10%;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 5px;
+            vertical-align: top;
+            text-align: left;
+        }
+
+    </style>
+</head>
+<body>
+<div><h1 style="text-align:center;">CSAF Diff Summary</h1></div>
+<div class="table_summary">
+    <div></div>
+    <div>
+        <table style="width: 100%">
+            <tr>
+                <th colspan="3"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Diff
+                </th>
+            </tr>
+            <tr>
+                <th style="width: 8%"></th>
+                <th style="text-align: center; width: 46%">{{ csaf_1 }}</th>
+                <th style="text-align: center; width: 46%">{{ csaf_2 }}</th>
+            </tr>
+            {% if status == 0 %}
+                <tr>
+                    <td colspan="3" style="text-align: center">No differences found.</td>
+                </tr>
+            {% endif %}
+            {% if diff_document_1 != "{}" or diff_document_2 != "{}" %}
+                <tr>
+                    <th>document</th>
+                    <td>{{ diff_document_1 }}</td>
+                    <td>{{ diff_document_2 }}</td>
+                </tr>
+            {% endif %}
+            {% if diff_product_tree_1 != "{}" or diff_product_tree_2 != "{}" %}
+                <tr>
+                    <th>product_tree</th>
+                    <td>{{ diff_product_tree_1 }}</td>
+                    <td>{{ diff_product_tree_2 }}</td>
+                </tr>
+            {% endif %}
+            {% if diff_vulnerabilities_1 or diff_vulnerabilities_2 %}
+                <tr>
+                    <th>vulnerabilities</th>
+                    <td>{% for item in diff_vulnerabilities_1 %}
+                        <details>
+                            <summary>{{ item['title'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value and key in ["cve", "discovery_date"] %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "cwe" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <li>{{ k }}: {{ v }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "scores" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                {% for score in value %}
+                                                    <ul>
+                                                        {% for k, v in score["cvss_v3"]|items %}
+                                                            <li>{{ k }}: {{ v }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endfor %}
+
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for note in value %}
+                                                        {% for n, o in note|items %}
+                                                            <li>{{ n }}: {{ o }}</li>
+                                                        {% endfor %}
+                                                        <br>{% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "product_status" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        {% if v|length > 0 %}
+                                                        <li>
+                                                            <details>
+                                                                <summary>{{ k }}:</summary>
+                                                                <ul>{% for a in v %}
+                                                                    <li>{{ a }}</li></ul>
+                                                                {% endfor %}
+                                                            </details>
+                                                        </li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                    <td>{% for item in diff_vulnerabilities_2 %}
+                        <details>
+                            <summary>{{ item['title'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value and key in ["cve", "discovery_date"] %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "cwe" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <li>{{ k }}: {{ v }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "scores" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                {% for score in value %}
+                                                    <ul>
+                                                        {% for k, v in score["cvss_v3"]|items %}
+                                                            <li>{{ k }}: {{ v }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endfor %}
+
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for note in value %}
+                                                        {% for n, o in note|items %}
+                                                            <li>{{ n }}: {{ o }}</li>
+                                                        {% endfor %}
+                                                        <br>{% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "product_status" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        {% if v|length > 0 %}
+                                                        <li>
+                                                            <details>
+                                                                <summary>{{ k }}:</summary>
+                                                                <ul>{% for a in v %}
+                                                                    <li>{{ a }}</li></ul>
+                                                                {% endfor %}
+                                                            </details>
+                                                        </li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
+        </table>
+    </div>
+    <div></div>
+</div>
+<br>
+<div class="table_summary">
+    <div></div>
+    <div>
+        <table style="width: 100%">
+            <tr>
+                <th colspan="2"
+                    style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
+                    Common
+                    Elements
+                </th>
+            </tr>
+            {% if common_document == "{}" and common_product_tree == "{}" and common_vulnerabilities|length == 0 %}
+                <tr>
+                    <td colspan="2" style="text-align: center">No commonalities.</td>
+                </tr>
+            {% endif %}
+            {% if common_document != "{}" %}
+                <tr>
+                    <th style="width: 8%">document</th>
+                    <td style="width: 41%">{{ common_document }}</td>
+                </tr>
+            {% endif %}
+            {% if common_product_tree != "{}" %}
+                <tr>
+                    <th style="width: 8%">product_tree</th>
+                    <td style="width: 41%">{{ common_product_tree }}</td>
+                </tr>
+            {% endif %}
+            {% if common_vulnerabilities|length > 0 %}
+               <tr>
+                    <th>vulnerabilities</th>
+                    <td>{% for item in common_vulnerabilities %}
+                        <details>
+                            <summary>{{ item['title'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value and key in ["cve", "discovery_date"] %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "cwe" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <li>{{ k }}: {{ v }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "scores" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                {% for score in value %}
+                                                    <ul>
+                                                        {% for k, v in score["cvss_v3"]|items %}
+                                                            <li>{{ k }}: {{ v }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endfor %}
+
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for note in value %}
+                                                        {% for n, o in note|items %}
+                                                            <li>{{ n }}: {{ o }}</li>
+                                                        {% endfor %}
+                                                        <br>{% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "product_status" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        {% if v|length > 0 %}
+                                                        <li>
+                                                            <details>
+                                                                <summary>{{ k }}:</summary>
+                                                                <ul>{% for a in v %}
+                                                                    <li>{{ a }}</li></ul>
+                                                                {% endfor %}
+                                                            </details>
+                                                        </li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+               </tr>
+            {% endif %}
+        </table>
+    </div>
+    <div></div>
+</div>
+<br>
+</body>
+</html>

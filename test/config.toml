@@ -2,7 +2,8 @@
 excluded_fields = []
 sort_keys = ["url", "content", "ref", "name", "value"]
 
-[bom_settings]
+[preset_settings]
+type = "bom"
 allow_new_data = false
 allow_new_versions = true
 components_only = false

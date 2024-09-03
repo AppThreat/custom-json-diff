@@ -4,10 +4,7 @@ import logging
 from importlib.metadata import version
 
 from custom_json_diff.lib.custom_diff import (
-    compare_dicts,
-    get_diff,
-    perform_bom_diff,
-    report_results
+    compare_dicts, get_diff, perform_bom_diff, perform_csaf_diff, report_results
 )
 from custom_json_diff.lib.custom_diff_classes import Options
 
@@ -24,7 +21,7 @@ def build_args() -> argparse.Namespace:
         version="%(prog)s " + version("custom_json_diff")
     )
     parser.set_defaults(
-        bom_diff=False,
+        preconfig_diff_type="",
         allow_new_versions=False,
         report_template="",
         components_only=False,
@@ -56,32 +53,31 @@ def build_args() -> argparse.Namespace:
         dest="config"
     )
     subparsers = parser.add_subparsers(help="subcommand help")
-    parser_bom_diff = subparsers.add_parser("bom-diff", help="compare CycloneDX BOMs")
-    parser_bom_diff.set_defaults(bom_diff=True)
-    parser_bom_diff.add_argument(
+    parser_pc_diff = subparsers.add_parser("preset-diff", help="Compare CycloneDX BOMs or Oasis CSAFs")
+    parser_pc_diff.set_defaults(preset_type="")
+    parser_pc_diff.add_argument(
         "--allow-new-versions",
         "-anv",
         action="store_true",
-        help="Allow newer versions in second BOM to pass.",
+        help="BOM only - allow newer versions in second BOM to pass.",
         dest="allow_new_versions",
         default=False,
     )
-    parser_bom_diff.add_argument(
+    parser_pc_diff.add_argument(
         "--allow-new-data",
         "-and",
         action="store_true",
-        help="Allow populated values in newer BOM to pass against empty values in original BOM.",
+        help="Allow populated values in newer BOM or CSAF to pass against empty values in original BOM/CSAF.",
         dest="allow_new_data",
         default=False,
     )
-    parser_bom_diff.add_argument(
-        "--components-only",
-        action="store_true",
-        help="Only compare components.",
-        dest="components_only",
-        default=False,
+    parser_pc_diff.add_argument(
+        "--type",
+        action="store",
+        help="Either bom or csaf",
+        dest="preset_type",
     )
-    parser_bom_diff.add_argument(
+    parser_pc_diff.add_argument(
         "-r",
         "--report-template",
         action="store",
@@ -89,10 +85,10 @@ def build_args() -> argparse.Namespace:
         dest="report_template",
         default="",
     )
-    parser_bom_diff.add_argument(
+    parser_pc_diff.add_argument(
         "--include-extra",
         action="store",
-        help="Include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
+        help="BOM only - include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
         dest="include",
     )
     parser.add_argument(
@@ -118,12 +114,14 @@ def main():
         logging.basicConfig(level=logging.DEBUG)
     exclude = args.exclude.split(",") if args.exclude else []
     include = args.include.split(",") if args.include else []
+    preset_type = args.preset_type.lower()
+    if preset_type and preset_type not in ("bom", "csaf"):
+        raise ValueError("Preconfigured type must be either bom or csaf.")
     options = Options(
         allow_new_versions=args.allow_new_versions,
         allow_new_data=args.allow_new_data,
         config=args.config,
-        comp_only=args.components_only,
-        bom_diff=args.bom_diff,
+        preconfig_type=preset_type,
         include=include,
         exclude=exclude,
         file_1=args.input[0],
@@ -132,8 +130,10 @@ def main():
         report_template=args.report_template,
     )
     result, j1, j2 = compare_dicts(options)
-    if args.bom_diff:
+    if preset_type == "bom":
         result, result_summary = perform_bom_diff(j1, j2)
+    elif preset_type == "csaf":
+        result, result_summary = perform_csaf_diff(j1, j2)
     else:
         result_summary = get_diff(j1, j2, options)
     report_results(result, result_summary, options, j1, j2)

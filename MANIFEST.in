@@ -1,1 +1,2 @@
 include custom_json_diff/lib/bom_diff_template.j2
+include custom_json_diff/lib/csaf_diff_template.j2

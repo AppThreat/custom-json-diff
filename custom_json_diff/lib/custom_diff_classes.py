@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 class Options:  # type: ignore
     allow_new_data: bool = False
     allow_new_versions: bool = False
-    bom_diff: bool = False
-    comp_only: bool = False
+    preconfig_type: str = ""
     config: str = ""
     exclude: List = field(default_factory=list)
     file_1: str = ""
@@ -31,31 +30,33 @@ class Options:  # type: ignore
     testing: bool = False
     comp_keys: List = field(default_factory=list)
     svc_keys: List = field(default_factory=list)
-    bom_num: int = 1
+    doc_num: int = 1
 
     def __post_init__(self):
         if self.testing:
             self.exclude, self.comp_keys, self.svc_keys, self.do_advanced = get_cdxgen_excludes(
-                self.include, self.comp_only, self.allow_new_versions, self.allow_new_data)
+                self.include, self.allow_new_versions, self.allow_new_data)
             self.sort_keys = ["url", "content", "ref", "name", "value", "location"]
         elif self.config:
             toml_data = import_config(self.config)
-            self.allow_new_versions = toml_data.get("bom_diff", {}).get(
+            self.preconfig_type = toml_data.get("preset_settings", {}).get("type", "")
+            self.allow_new_versions = toml_data.get("preset_settings", {}).get(
                 "allow_new_versions", False)
-            self.allow_new_data = toml_data.get("bom_diff", {}).get("allow_new_data", False)
-            self.report_template = toml_data.get("bom_diff", {}).get("report_template", "")
+            self.allow_new_data = toml_data.get("preset_settings", {}).get("allow_new_data", False)
+            self.report_template = toml_data.get("preset_settings", {}).get("report_template", "")
             self.sort_keys = toml_data.get("settings", {}).get("sort_keys", [])
             self.exclude = toml_data.get("settings", {}).get("excluded_fields", [])
             self.include = toml_data.get("settings", {}).get("include_extra", [])
-            self.comp_only = toml_data.get("bom_diff", {}).get("components_only", False)
-        if self.bom_diff:
+        if self.preconfig_type == "bom":
             tmp_exclude, tmp_bom_key_fields, tmp_service_key_fields, self.do_advanced = (
-                get_cdxgen_excludes(
-                    self.include, self.comp_only, self.allow_new_versions, self.allow_new_data))
+                get_cdxgen_excludes(self.include, self.allow_new_versions, self.allow_new_data))
             self.comp_keys.extend(tmp_bom_key_fields)
             self.svc_keys.extend(tmp_service_key_fields)
             self.exclude.extend(tmp_exclude)
             self.sort_keys.extend(["purl", "bom-ref", "content", "cve", "id", "url", "text", "ref", "name", "value", "location"])
+        elif self.preconfig_type == "csaf":
+            self.exclude.extend(["document.tracking"])
+            self.sort_keys.extend(["title", "text", "product_id", "url"])
         self.exclude = list(set(self.exclude))
         self.include = list(set(self.include))
         self.comp_keys = list(set(self.comp_keys))
@@ -146,7 +147,7 @@ class BomComponent:
         self.version = comp.get("version", "")
 
     def __eq__(self, other):
-        c1, c2 = order_boms(self, other)
+        c1, c2 = order_documents(self, other)
         if self.options.allow_new_versions and self.options.allow_new_data:
             return eq_allow_new_data_comp(c1, c2)
         if self.options.allow_new_versions:
@@ -196,7 +197,7 @@ class BomDicts:
                  components: List | None = None, services: List | None = None,
                  dependencies: List | None = None, vulnerabilities: List | None = None):
         self.options = options
-        self.options.bom_num = 1 if filename == options.file_1 else 2
+        self.options.doc_num = 1 if filename == options.file_1 else 2
         self.other_data, self.components, self.services, self.dependencies, self.vdrs = import_bom_dict(
             self.options, original_data, other_data, components, services, dependencies, vulnerabilities)
         self.filename = filename
@@ -216,8 +217,8 @@ class BomDicts:
         dependencies = self.dependencies
         vulnerabilities = self.vdrs
         if other.filename == "common_summary":
-            other.options.bom_num = 2
-            self.options.bom_num = 1
+            other.options.doc_num = 2
+            self.options.doc_num = 1
         if other.components:
             components = [i for i in self.components if i not in other.components]
         if other.services:
@@ -239,13 +240,12 @@ class BomDicts:
             vulnerabilities=vulnerabilities
         )
         if new_bom_dict.filename == new_bom_dict.options.file_1:
-            new_bom_dict.options.bom_num = 1
+            new_bom_dict.options.doc_num = 1
         return new_bom_dict
 
     def intersection(self, other, title: str = "") -> "BomDicts":
         components = []
         dependencies = []
-        other_data = None
         services = []
         vulnerabilities = []
         if self.components and other.components:
@@ -258,7 +258,7 @@ class BomDicts:
             vulnerabilities = [i for i in self.vdrs if i in other.vdrs]
         other_data = self.other_data.intersection(other.other_data)
         options = deepcopy(self.options)
-        new_bom_dict = BomDicts(
+        return BomDicts(
             options,
             title or other.filename,
             {},
@@ -268,7 +268,6 @@ class BomDicts:
             dependencies=dependencies,
             vulnerabilities=vulnerabilities
         )
-        return new_bom_dict
 
     def generate_comp_counts(self) -> Dict:
         lib = 0
@@ -289,7 +288,15 @@ class BomDicts:
                 "services": len(self.services), "dependencies": len(self.dependencies),
                 "vulnerabilities": len(self.vdrs)}
 
-    def to_summary(self) -> Tuple[int, Dict]:
+    def get_refs(self) -> Dict:
+        return {
+            "components": {i.bom_ref for i in self.components},
+            "dependencies": {i.ref for i in self.dependencies},
+            "services": {i.search_key for i in self.services},
+            "vdrs": {i.bom_ref for i in self.vdrs}
+        }
+
+    def to_summary(self) -> Dict:
         summary: Dict = {self.filename: {}}
         if self.components:
             summary[self.filename] = {"components": {
@@ -302,20 +309,16 @@ class BomDicts:
                 "other_components": [i.to_dict() for i in self.components if
                                      i.component_type not in (
                                          "library", "framework", "application")], }}
-        if not self.options.comp_only:
-            if self.other_data:
-                summary[self.filename] |= {"misc_data": self.other_data.to_dict(unflat=True)}
-            if self.services:
-                summary[self.filename] |= {"services": [i.to_dict() for i in self.services]}
-            if self.dependencies:
-                summary[self.filename] |= {"dependencies": [
-                    i.to_dict() for i in self.dependencies]}
-            if self.vdrs:
-                summary[self.filename] |= {"vulnerabilities": [i.to_dict() for i in self.vdrs]}
-        status = 3 if any((self.components, self.vdrs, self.services, self.dependencies)) else 0
-        if status == 0 and self.other_data.data:
-            status = 2
-        return status, summary
+        if self.other_data:
+            summary[self.filename] |= {"misc_data": self.other_data.to_dict(unflat=True)}
+        if self.services:
+            summary[self.filename] |= {"services": [i.to_dict() for i in self.services]}
+        if self.dependencies:
+            summary[self.filename] |= {"dependencies": [
+                i.to_dict() for i in self.dependencies]}
+        if self.vdrs:
+            summary[self.filename] |= {"vulnerabilities": [i.to_dict() for i in self.vdrs]}
+        return summary
 
 
 class BomService:
@@ -390,7 +393,7 @@ class BomVdr:
         if not self.options.allow_new_data and not self.options.allow_new_versions:
             return all((self._field_eq(other), self.bom_ref == other.bom_ref,
                         self.affects == other.affects, self.updated == other.updated))
-        b1, b2 = order_boms(self, other)
+        b1, b2 = order_documents(self, other)
         if self.options.allow_new_data:
             # eq_allow_new_data_vdr checks for allow_new_versions as well
             return eq_allow_new_data_vdr(b1, b2)
@@ -409,16 +412,12 @@ class BomVdr:
             self.cwes == other.cwes,
             self.description == other.description,
             self.detail == other.detail,
-            # self.method == other.method,
             self.properties == other.properties,
             self.published == other.published,
             self.ratings == other.ratings,
             self.recommendation == other.recommendation,
             self.references == other.references,
-            # self.score == other.score,
-            # self.severity == other.severity,
             self.source == other.source,
-            # self.vector == other.vector
             ))
 
     def clear(self):
@@ -456,7 +455,7 @@ class BomVdrAffects:
     def __eq__(self, other):
         if self.data == other.data:
             return True
-        a1, a2 = order_boms(self, other)
+        a1, a2 = order_documents(self, other)
         if self.options.allow_new_data and self.options.allow_new_versions:
             if a1.ref and not compare_bom_refs(a1.ref, a2.ref, "<="):
                 return False
@@ -473,9 +472,124 @@ class BomVdrAffects:
         return {"ref": self.ref, "versions": self.versions}
 
 
-def advanced_eq_lists(bom_1: List, bom_2: List) -> bool:
+class CsafDicts:
+    def __init__(self, options: "Options", filename: str, original_data: Dict | None = None,
+                 document: FlatDicts | None = None, product_tree: FlatDicts | None = None,
+                 vulnerabilities: List | None = None):
+        self.document, self.product_tree, self.vulnerabilities = import_csaf(
+            options, original_data, document, product_tree, vulnerabilities)
+        self.options = options
+        self.options.doc_num = 1 if filename == options.file_1 else 2
+        self.filename = filename
+
+    def __eq__(self, other):
+        return all((
+            self.document == other.document,
+            self.product_tree == other.product_tree,
+            self.vulnerabilities == other.vulnerabilities
+        ))
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __sub__(self, other):
+        document = self.document - other.document
+        product_tree = self.product_tree - other.product_tree
+        vulnerabilities = [i for i in self.vulnerabilities if i not in other.vulnerabilities]
+        filename = self.filename
+        options = deepcopy(self.options)
+        return CsafDicts(
+            options,
+            filename,
+            {},
+            document=document,
+            product_tree=product_tree,
+            vulnerabilities=vulnerabilities
+        )
+
+    def get_refs(self):
+        return {"vulnerabilities": {i.title for i in self.vulnerabilities}}
+
+    def intersection(self, other, title: str = "") -> "CsafDicts":
+        document = self.document.intersection(other.document)
+        product_tree = self.product_tree.intersection(other.product_tree)
+        vulnerabilities = [i for i in self.vulnerabilities if i in other.vulnerabilities]
+        options = deepcopy(self.options)
+        return CsafDicts(
+            options,
+            title or other.filename,
+            {},
+            document=document,
+            product_tree=product_tree,
+            vulnerabilities=vulnerabilities
+        )
+
+    def to_dict(self):
+        return {
+            "document": self.document.to_dict(unflat=True) if self.document else {},
+            "product_tree": self.product_tree.to_dict(unflat=True) if self.product_tree else {},
+            "vulnerabilities": [i.to_dict() for i in self.vulnerabilities] if self.vulnerabilities else []
+        }
+
+    def to_summary(self) -> Dict:
+        return {self.filename: self.to_dict()}
+
+
+class CsafVulnerability:
+    def __init__(self, data: Dict, options: "Options"):
+        self.acknowledgements = data.get("acknowledgements", [])
+        self.cve = data.get("cve", "")
+        self.cwe = data.get("cwe", "")
+        self.discovery_date = data.get("discovery_date", "")
+        self.ids = data.get("ids", [])
+        self.notes = data.get("notes", [])
+        self.options = options
+        self.product_status = data.get("product_status", {})
+        self.references = data.get("references", [])
+        self.scores = data.get("scores", [])
+        self.title = data.get("title", "")
+
+    def __eq__(self, other):
+        if not self.options.allow_new_data:
+            return self.to_dict() == other.to_dict()
+        attributes_to_compare = [('cve', lambda self, other: self.cve == other.cve),
+            ('cwe', lambda self, other: self.cwe == other.cwe),
+            ('discovery_date', lambda self, other: self.discovery_date == other.discovery_date),
+            ('product_status', lambda self, other: self.product_status == other.product_status), (
+            'acknowledgements',
+            lambda self, other: advanced_eq_lists(self.acknowledgements, other.acknowledgements)),
+            ('ids', lambda self, other: advanced_eq_lists(self.ids, other.ids)),
+            ('notes', lambda self, other: advanced_eq_lists(self.notes, other.notes)), (
+            'references',
+            lambda self, other: advanced_eq_lists(self.references, other.references)),
+            ('scores', lambda self, other: advanced_eq_lists(self.scores, other.scores)),
+            ('title', lambda self, other: self.title == other.title),]
+        return not any(
+            getattr(self, attr) and not compare(self, other)
+            for attr, compare in attributes_to_compare
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def to_dict(self):
+        return {
+            "acknowledgements": self.acknowledgements,
+            "cve": self.cve,
+            "cwe": self.cwe,
+            "discovery_date": self.discovery_date,
+            "ids": self.ids,
+            "notes": self.notes,
+            "product_status": self.product_status,
+            "references": self.references,
+            "scores": self.scores,
+            "title": self.title
+        }
+
+
+def advanced_eq_lists(lst_1: List, lst_2: List) -> bool:
     """Checks that all items in bom_1 are in bom_2 when allow_new_data is True"""
-    return False if len(bom_1) > len(bom_2) else all(i in bom_2 for i in bom_1)
+    return False if len(lst_1) > len(lst_2) else all(i in lst_2 for i in lst_1)
 
 
 def eq_allow_new_data_comp(bom_1: BomComponent, bom_2: BomComponent) -> bool:
@@ -583,8 +697,7 @@ def create_search_key(key: str, value: str) -> str:
     return combined_key
 
 
-def get_cdxgen_excludes(includes: List[str], comp_only: bool, allow_new_versions: bool,
-                        allow_new_data: bool) -> Tuple[List[str], List[str], List[str], bool]:
+def get_cdxgen_excludes(includes: List[str], allow_new_versions: bool, allow_new_data: bool) -> Tuple[List[str], List[str], List[str], bool]:
 
     excludes = {'metadata.timestamp': 'metadata.timestamp', 'serialNumber': 'serialNumber',
                 'metadata.tools.components.[].version': 'metadata.tools.components.[].version',
@@ -594,8 +707,6 @@ def get_cdxgen_excludes(includes: List[str], comp_only: bool, allow_new_versions
                 'licenses': 'components.[].licenses', 'hashes': 'components.[].hashes',
                 'externalReferences': 'components.[].externalReferences',
                 'externalreferences': 'components.[].externalReferences'}
-    if comp_only:
-        excludes |= {'services': 'services', 'dependencies': 'dependencies', 'vulnerabilities': 'vulnerabilities'}
     if allow_new_data:
         component_keys = []
         service_keys = []
@@ -640,14 +751,37 @@ def import_bom_dict(
     return other_data, components, services, dependencies, vulnerabilities  # type: ignore
 
 
+def import_csaf(options: "Options", original_data: Dict | None = None, document: FlatDicts | None = None,
+                product_tree: FlatDicts | None = None, vex: List | None = None
+                ) -> Tuple[FlatDicts, FlatDicts, List]:
+    if original_data:
+        if document or product_tree or vex:
+            logger.warning("Both source dict and parsed elements included. Using source dict.")
+        return FlatDicts(original_data.get("document", {})), FlatDicts(
+            original_data.get("product_tree", {})), [
+            CsafVulnerability(i, options) for i in original_data.get("vulnerabilities", [])]
+    return document or FlatDicts({}), product_tree or FlatDicts({}), vex or []
+
+
 def import_flat_dict(data: Dict | List[FlatElement]) -> List[FlatElement]:
-    if isinstance(data, List):
+    if not data:
+        return []
+    if data and isinstance(data, List) and isinstance(data[0], FlatElement):
         return data
+    if not isinstance(data, Dict):
+        raise TypeError("data must be a dict or list of FlatElement")
     flat_dicts = []
     for key, value in data.items():
         ele = FlatElement(key, value)
         flat_dicts.append(ele)
     return flat_dicts
+
+
+def order_documents(doc_1: BomDicts | CsafDicts, doc_2: BomDicts | CsafDicts) -> Tuple:
+    """Ensures we compare boms in the correct order for allow_new_versions and allow_new_data"""
+    if doc_1.options.doc_num == 1:
+        return doc_1, doc_2
+    return doc_2, doc_1
 
 
 def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, List, List, List, List]:
@@ -659,16 +793,10 @@ def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, Li
     if not original_data:
         return FlatDicts(other_data), components, services, dependencies, vulnerabilities
     components = [BomComponent(i, options) for i in original_data.get("components", [])]
-    if not options.comp_only:
-        services.extend(BomService(i, options) for i in original_data.get("services", []))
-        dependencies.extend(BomDependency(i, options) for i in original_data.get("dependencies", []))
-        vulnerabilities.extend(BomVdr(data=i, options=options) for i in original_data.get("vulnerabilities", []))
-        for key, value in original_data.items():
-            if key not in {"components", "dependencies", "services", "vulnerabilities"}:
-                other_data |= {key: value}
+    services.extend(BomService(i, options) for i in original_data.get("services", []))
+    dependencies.extend(BomDependency(i, options) for i in original_data.get("dependencies", []))
+    vulnerabilities.extend(BomVdr(data=i, options=options) for i in original_data.get("vulnerabilities", []))
+    for key, value in original_data.items():
+        if key not in {"components", "dependencies", "services", "vulnerabilities"}:
+            other_data |= {key: value}
     return FlatDicts(other_data), components, services, dependencies, vulnerabilities
-
-
-def order_boms(bom_1: BomDicts, bom_2: BomDicts) -> Tuple:
-    """Ensures we compare boms in the correct order for allow_new_versions and allow_new_data"""
-    return (bom_1, bom_2) if bom_1.options.bom_num == 1 else (bom_2, bom_1)

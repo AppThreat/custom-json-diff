@@ -11,28 +11,28 @@ from custom_json_diff.lib.custom_diff_classes import (
 
 @pytest.fixture
 def options_1():
-    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", bom_diff=True, include=["hashes", "evidence", "licenses"])
+    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", preconfig_type="bom", include=["hashes", "evidence", "licenses"])
 
 
 @pytest.fixture
 def options_2():
-    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", bom_diff=True, allow_new_versions=True, include=["hashes", "evidence", "properties"])
+    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", preconfig_type="bom", allow_new_versions=True, include=["hashes", "evidence", "properties"])
 
 
 @pytest.fixture
 def options_3():
-    return Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True)
+    return Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True)
 
 
 @pytest.fixture
 def options_4():
-    return Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, allow_new_data=True, include=["hashes", "evidence", "properties"])
+    return Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_versions=True, allow_new_data=True, include=["hashes", "evidence", "properties"])
 
 
 @pytest.fixture
 def bom_dicts_1():
     options = Options(file_1="bom_1.json", file_2="bom_2.json",
-                      bom_diff=True, allow_new_data=True)
+                      preconfig_type="bom", allow_new_data=True)
     bom_dicts = BomDicts(options, "bom_1.json", {}, FlatDicts({}), [])
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.0.0"
@@ -53,7 +53,7 @@ def bom_dicts_1():
 @pytest.fixture
 def bom_dicts_2():
     options = Options(file_1="bom_1.json", file_2="bom_2.json",
-                      bom_diff=True, allow_new_data=True)
+                      preconfig_type="bom", allow_new_data=True)
     bom_dicts = BomDicts(options, "bom_2.json", {}, FlatDicts({}), [])
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.0.0"
@@ -73,7 +73,7 @@ def bom_dicts_2():
 
 @pytest.fixture
 def bom_dicts_3():
-    options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, comp_only=True)
+    options = Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_versions=True)
     bom_dicts = BomDicts(options, "bom_1.json", {}, FlatDicts({}), [])
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.0.0"
@@ -93,7 +93,7 @@ def bom_dicts_3():
 
 @pytest.fixture
 def bom_dicts_4():
-    options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, comp_only=True)
+    options = Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_versions=True)
     bom_dicts = BomDicts(options, "bom_2.json", {}, FlatDicts([]))
     bom_dicts.components = [BomComponent({
         "bom-ref": "pkg:maven/org.springframework.cloud/spring-cloud-starter-config@2.3.0"
@@ -113,9 +113,8 @@ def bom_dicts_4():
 
 @pytest.fixture
 def bom_dicts_5():
-    options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, allow_new_data=True)
-    bom_dicts = BomDicts(options, "bom_1.json", {}, {})
-    bom_dicts.components = [BomComponent(
+    options = Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_versions=True, allow_new_data=True)
+    return BomDicts(options, "bom_1.json", {}, components=[BomComponent(
         {"bom-ref": "pkg:pypi/flask@1.1.2", "group": "", "name": "flask",
             "purl": "pkg:pypi/flask@1.1.2", "type": "framework", "version": "1.1.2"}, options),
         BomComponent({"bom-ref": "pkg:pypi/werkzeug@1.0.1", "group": "", "name": "Werkzeug",
@@ -125,15 +124,13 @@ def bom_dicts_5():
             options), BomComponent(
             {"bom-ref": "pkg:github/actions/setup-python@v2", "group": "actions",
                 "name": "setup-python", "purl": "pkg:github/actions/setup-python@v2",
-                "type": "application", "version": "v2"}, options)]
-    return bom_dicts
+                "type": "application", "version": "v2"}, options)])
 
 
 @pytest.fixture
 def bom_dicts_6():
-    options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_versions=True, allow_new_data=True)
-    bom_dicts = BomDicts(options, "bom_2.json", {}, {})
-    bom_dicts.components = [
+    options = Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_versions=True, allow_new_data=True)
+    return BomDicts(options, "bom_2.json", {}, components=[
         BomComponent({
       "bom-ref": "pkg:pypi/flask@1.1.0",
       "group": "",
@@ -166,15 +163,14 @@ def bom_dicts_6():
       "type": "application",
       "version": "v2"
     }, options)
-    ]
-    return bom_dicts
+    ])
 
 
 @pytest.fixture
 def bom_dicts_7():
-    options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True,
+    options = Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True,
                       allow_new_versions=True)
-    bom_dicts = BomDicts(options, "bom_1.json", {}, {}, components=[BomComponent(
+    return BomDicts(options, "bom_1.json", {}, components=[BomComponent(
         {"bom-ref": "pkg:pypi/requests@2.31.0", "evidence": {
             "identity": {"confidence": 0.8, "field": "purl", "methods": [
                 {"confidence": 0.8, "technique": "manifest-analysis",
@@ -183,14 +179,13 @@ def bom_dicts_7():
             "value": "/home/runner/work/src_repos/python/django-goat/requirements_tests.txt"}],
             "purl": "pkg:pypi/requests@2.31.0", "type": "library", "version": "2.31.0"},
         options), ])
-    return bom_dicts
 
 
 @pytest.fixture
 def bom_dicts_8():
-    options = Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True,
+    options = Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True,
                       allow_new_versions=True)
-    bom_dicts = BomDicts(options, "bom_2.json", {}, {}, components=[
+    return BomDicts(options, "bom_2.json", {}, components=[
     BomComponent({
       "bom-ref": "pkg:pypi/requests@2.32.3",
       "evidence": {
@@ -219,8 +214,6 @@ def bom_dicts_8():
       "version": "2.32.3"
     }, options)], )
 
-    return bom_dicts
-
 
 @pytest.fixture
 def bom_component_1():
@@ -248,7 +241,7 @@ def bom_component_1():
           "scope": "required",
           "type": "framework",
           "version": "4.1.110.Final-SNAPSHOT"
-        }, Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True, bom_num=1)
+        }, Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True, doc_num=1)
     )
 
 
@@ -286,7 +279,7 @@ def bom_component_2():
           "scope": "required",
           "type": "framework",
           "version": "4.1.110.Final-SNAPSHOT"
-        }, Options(file_1="bom_1.json", file_2="bom_2.json", bom_diff=True, allow_new_data=True, bom_num=2)
+        }, Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True, doc_num=2)
     )
 
 
@@ -323,7 +316,7 @@ def test_bom_diff_vdr_options(options_1):
     # test don't allow --allow-new-data or --allow-new-versions
     bom1 = BomVdr(id="CVE-2022-25881",options=options_1)
     bom2 = BomVdr(id="CVE-2022-25881",options=options_1)
-    bom2.options.bom_num = 2
+    bom2.options.doc_num = 2
     assert bom1 == bom2
     bom2.id = "CVE-2022-25883"
     assert bom1 != bom2
@@ -428,9 +421,9 @@ def test_bom_diff_vdr_options(options_1):
 
 def test_bom_diff_vdr_options_allow_new_versions(options_2):
     # test --allow-new-versions
-    options_2.bom_num = 1
+    options_2.doc_num = 1
     options_2_copy = deepcopy(options_2)
-    options_2_copy.bom_num = 2
+    options_2_copy.doc_num = 2
     bom1, bom2 = BomVdr(options=options_2), BomVdr(options=options_2_copy)
 
     bom1.bom_ref, bom2.bom_ref = "NPM-1091792/pkg:npm/base64url@0.0.6", "NPM-1091792/pkg:npm/base64url@0.0.7"
@@ -460,7 +453,7 @@ def test_bom_diff_vdr_options_allow_new_versions(options_2):
 def test_bom_diff_vdr_options_allow_new_data(options_3):
     # test --allow-new-data
     options_3_copy = deepcopy(options_3)
-    options_3_copy.bom_num = 2
+    options_3_copy.doc_num = 2
     bom1, bom2 = BomVdr(id="",options=options_3), BomVdr(id="CVE-2022-25881",options=options_3_copy)
     assert bom1 == bom2
     bom1.id, bom2.id = "CVE-2022-25883", ""
@@ -563,7 +556,7 @@ def test_bom_diff_vdr_options_allow_new_data(options_3):
 def test_bom_diff_vdr_options_allow_all(options_4):
     # test --allow-new-data
     options_4_copy = deepcopy(options_4)
-    options_4_copy.bom_num = 2
+    options_4_copy.doc_num = 2
     bom1, bom2 = BomVdr(id="",options=options_4), BomVdr(id="CVE-2022-25881",options=options_4_copy)
     assert bom1 == bom2
     bom1.id, bom2.id = "CVE-2022-25883", ""
@@ -598,6 +591,6 @@ def test_bom_diff_vdr_options_allow_all(options_4):
 def test_bom_components_lists(bom_component_1, bom_component_2):
     # tests allow_new_data with component lists of dicts
     assert bom_component_1 == bom_component_2
-    bom_component_1.options.bom_num = 2
-    bom_component_2.options.bom_num = 1
+    bom_component_1.options.doc_num = 2
+    bom_component_2.options.doc_num = 1
     assert bom_component_1 != bom_component_2
