@@ -108,20 +108,13 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
     return diff_summary
 
 
-def generate_csaf_diff(csaf: CsafDicts, commons: CsafDicts) -> Dict:
+def generate_csaf_diff(csaf: CsafDicts, commons: CsafDicts, common_refs: Dict[str, Set]) -> Dict:
     return {
+        csaf.filename: {
         "document": (csaf.document - commons.document).to_dict(),
         "product_tree": (csaf.product_tree - commons.product_tree).to_dict(),
-        "vulnerabilities": [i.to_dict() for i in csaf.vulnerabilities if i not in commons.vulnerabilities]
-    }
-
-
-def get_common_bom_refs(commons: BomDicts) -> Dict:
-    return {
-        "components": {i.bom_ref for i in commons.components},
-        "dependencies": {i.ref for i in commons.dependencies},
-        "services": {i.search_key for i in commons.services},
-        "vdrs": {i.bom_ref for i in commons.vdrs}
+        "vulnerabilities": [i.to_dict() for i in csaf.vulnerabilities if i.title not in common_refs["vulnerabilities"]]
+        }
     }
 
 
@@ -156,7 +149,9 @@ def get_second_bom_diff(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> 
             commons.vdrs.append(i)
         elif res == 2:
             vdrs.append(i)
-    return commons, BomDicts(bom_2.options, bom_2.filename, {}, other_data=bom_2.other_data-bom_1.other_data, components=components, services=services, dependencies=dependencies, vulnerabilities=vdrs)
+    return commons, BomDicts(bom_2.options, bom_2.filename, {},
+                             other_data=bom_2.other_data - bom_1.other_data, components=components,
+                             services=services, dependencies=dependencies, vulnerabilities=vdrs)
 
 
 def get_second_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[CsafDicts, CsafDicts]:
@@ -166,7 +161,10 @@ def get_second_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDict
             commons.vulnerabilities.append(i)
         elif res == 2:
             vulnerabilities.append(i)
-    return commons, CsafDicts(csaf_2.options, csaf_2.filename, {}, document=csaf_2.document-csaf_1.document, product_tree=csaf_2.product_tree-csaf_1.product_tree, vulnerabilities=vulnerabilities)
+    return commons, CsafDicts(csaf_2.options, csaf_2.filename, {},
+                              document=csaf_2.document - csaf_1.document,
+                              product_tree=csaf_2.product_tree - csaf_1.product_tree,
+                              vulnerabilities=vulnerabilities)
 
 
 def get_status(diff: Dict) -> int:
@@ -244,10 +242,13 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
     else:
         logger.warning("No output file specified. No reports generated.")
         return
-    if options.preconfig_type == "bom":
+    if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
-        export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
+        if options.preconfig_type == "bom":
+            export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
                            calculate_pcts(diffs, j1, j2))
+        elif options.preconfig_type == "csaf":
+            export_html_report(report_file, diffs, options, status)
 
 
 def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:
@@ -266,19 +267,22 @@ def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, com
 
 def summarize_bom_diffs(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> Tuple[int, Dict]:
     commons_2, bom_2 = get_second_bom_diff(bom_1, bom_2, commons)
-    common_refs = get_common_bom_refs(commons_2)
+    common_refs = commons_2.get_refs()
     diff_summary_1 = generate_bom_diff(bom_1, commons, common_refs)
-    diff_summary_2 = generate_bom_diff(bom_2, commons, common_refs)
+    diff_summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
     status = int(get_status(diff_summary_1) or get_status(diff_summary_2))
     return status, {bom_1.filename: diff_summary_1, bom_2.filename: diff_summary_2}
 
 
 def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[int, Dict]:
     commons_2, csaf_2 = get_second_csaf_diff(csaf_1, csaf_2, commons)
-    csaf_1 = csaf_1 - commons_2
+    csaf_1 = csaf_1 - commons
+    common_refs = commons_2.get_refs()
+    diff_summary_1 = csaf_1.to_summary()
+    diff_summary_2 = generate_csaf_diff(csaf_2, commons_2, common_refs)
     status = int(any((
         csaf_1.document, csaf_2.document, csaf_1.product_tree, csaf_2.product_tree,
         csaf_1.vulnerabilities, csaf_2.vulnerabilities)))
-    diff_summary_1 = generate_csaf_diff(csaf_1, commons)
-    diff_summary_2 = generate_csaf_diff(csaf_2, commons_2)
-    return status, {csaf_1.filename: diff_summary_1, csaf_2.filename: diff_summary_2}
+    # diff_summary_1 = csaf_1.to_summary()
+    # diff_summary_2 = csaf_2.to_summary()
+    return status, {**diff_summary_1, **diff_summary_2}

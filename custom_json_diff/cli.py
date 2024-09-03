@@ -53,13 +53,13 @@ def build_args() -> argparse.Namespace:
         dest="config"
     )
     subparsers = parser.add_subparsers(help="subcommand help")
-    parser_pc_diff = subparsers.add_parser("preconfigured-diff-type", help="Compare CycloneDX BOMs or Oasis CSAFs")
-    parser_pc_diff.set_defaults(preconfigured_type="")
+    parser_pc_diff = subparsers.add_parser("preset-diff", help="Compare CycloneDX BOMs or Oasis CSAFs")
+    parser_pc_diff.set_defaults(preset_type="")
     parser_pc_diff.add_argument(
         "--allow-new-versions",
         "-anv",
         action="store_true",
-        help="Allow newer versions in second BOM to pass.",
+        help="BOM only - allow newer versions in second BOM to pass.",
         dest="allow_new_versions",
         default=False,
     )
@@ -67,15 +67,15 @@ def build_args() -> argparse.Namespace:
         "--allow-new-data",
         "-and",
         action="store_true",
-        help="Allow populated values in newer BOM to pass against empty values in original BOM.",
+        help="Allow populated values in newer BOM or CSAF to pass against empty values in original BOM/CSAF.",
         dest="allow_new_data",
         default=False,
     )
     parser_pc_diff.add_argument(
-        "--preconfigured-type",
+        "--type",
         action="store",
-        help="bom or csaf",
-        dest="preconfigured_type",
+        help="Either bom or csaf",
+        dest="preset_type",
     )
     parser_pc_diff.add_argument(
         "-r",
@@ -88,7 +88,7 @@ def build_args() -> argparse.Namespace:
     parser_pc_diff.add_argument(
         "--include-extra",
         action="store",
-        help="Include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
+        help="BOM only - include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
         dest="include",
     )
     parser.add_argument(
@@ -114,13 +114,14 @@ def main():
         logging.basicConfig(level=logging.DEBUG)
     exclude = args.exclude.split(",") if args.exclude else []
     include = args.include.split(",") if args.include else []
-    preconfigured_type = args.preconfigured_type.lower()
+    preset_type = args.preset_type.lower()
+    if preset_type and preset_type not in ("bom", "csaf"):
+        raise ValueError("Preconfigured type must be either bom or csaf.")
     options = Options(
         allow_new_versions=args.allow_new_versions,
         allow_new_data=args.allow_new_data,
         config=args.config,
-        comp_only=args.components_only,
-        preconfig_type=preconfigured_type,
+        preconfig_type=preset_type,
         include=include,
         exclude=exclude,
         file_1=args.input[0],
@@ -129,13 +130,12 @@ def main():
         report_template=args.report_template,
     )
     result, j1, j2 = compare_dicts(options)
-    if preconfigured_type == "bom":
+    if preset_type == "bom":
         result, result_summary = perform_bom_diff(j1, j2)
-    elif preconfigured_type == "csaf":
+    elif preset_type == "csaf":
         result, result_summary = perform_csaf_diff(j1, j2)
     else:
         result_summary = get_diff(j1, j2, options)
-
     report_results(result, result_summary, options, j1, j2)
 
 

@@ -2,9 +2,8 @@
 
 Comparing two JSON files presents an issue when the two files have certain fields which are 
 dynamically generated (e.g. timestamps), variable ordering, or other fields which need to be 
-excluded for one reason or another. Enter custom-json-diff, which allows you to specify fields to 
-ignore in the comparison and sorts all fields.
-
+excluded or undergo specialized comparison for one reason or another. Enter custom-json-diff, 
+which allows you to specify fields to ignore in the comparison and sorts all fields.
 
 
 ## Installation
@@ -15,11 +14,11 @@ ignore in the comparison and sorts all fields.
 Note, you may use `cjd` rather than `custom-json-diff` to run.
 
 ```
-usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE] [--debug] {bom-diff} ...
+usage: custom-json-diff [-h] [-v] -i INPUT INPUT [-o OUTPUT] [-c CONFIG] [-x EXCLUDE] [--debug] {preset-diff} ...
 
 positional arguments:
-  {bom-diff}            subcommand help
-    bom-diff            compare CycloneDX BOMs
+  {preset-diff}         subcommand help
+    preset-diff         Compare CycloneDX BOMs or Oasis CSAFs
 
 options:
   -h, --help            show this help message and exit
@@ -36,30 +35,37 @@ options:
 
 ```
 
-bom-diff usage
+preset-diff usage
 ```
-usage: custom-json-diff bom-diff [-h] [--allow-new-versions] [--allow-new-data] [--components-only] [-r REPORT_TEMPLATE] [--include-extra INCLUDE]
+usage: custom-json-diff preset-diff [-h] [--allow-new-versions] [--allow-new-data] [--type PRESET_TYPE] [-r REPORT_TEMPLATE] [--include-extra INCLUDE]
 
 options:
   -h, --help            show this help message and exit
   --allow-new-versions, -anv
-                        Allow newer versions in second BOM to pass.
+                        BOM only - allow newer versions in second BOM to pass.
   --allow-new-data, -and
-                        Allow populated values in newer BOM to pass against empty values in original BOM.
-  --components-only     Only compare components.
+                        Allow populated values in newer BOM or CSAF to pass against empty values in original BOM/CSAF.
+  --type PRESET_TYPE    Either bom or csaf
   -r REPORT_TEMPLATE, --report-template REPORT_TEMPLATE
                         Jinja2 template to use for report generation.
   --include-extra INCLUDE
-                        Include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).
+                        BOM only - include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).
+
 ```
+## Preset Diffs
 
-## Bom Diff
+CJD offers advanced diffing for Cyclonedx BOM (v1.5 or v1.6) produced by 
+[CycloneDx Cdxgen](https://github.com/CycloneDX/cdxgen) and Oasis CSAF v2 produced by 
+[OWASP-dep-scan](https://github.com/OWASP-dep-scan/dep-scan).
 
-The bom-diff command compares CycloneDx BOM components, services, and dependencies, as well as data 
+
+### Bom Diff
+
+The `preset-diff --type bom` command compares CycloneDx BOM components, services, and dependencies, as well as data 
 outside of these parts. 
 
 Some fields are excluded from the component comparison by default but can be explicitly specified 
-for inclusion using `bom-diff --include-extra` and whichever field(s) you wish to include (e.g. 
+for inclusion using `preset-diff --include-extra` and whichever field(s) you wish to include (e.g. 
 `--include-extra properties,evidence,licenses`:
 - properties
 - evidence
@@ -67,10 +73,17 @@ for inclusion using `bom-diff --include-extra` and whichever field(s) you wish t
 - hashes
 - externalReferences
 
-You can use the -x --exclude switch before the bom-diff command to exclude any of these 
-(see [Specifying fields to exclude](#specifying-fields-to-exclude) ).
+You can use the -x --exclude switch before the preset-diff command to exclude any of these 
+(see [Specifying fields to exclude](#specifying-fields-to-exclude)) except for bom-ref, as that is needed for the comparison -
+if the bom-ref includes a version, that part can be excluded as needed (see 
+[Allowing newer versions](#allowing-newer-versions)).
 
 Default included fields:
+
+bomFormat
+metadata
+specVersion
+version
 
 components:
 - author
@@ -111,9 +124,39 @@ vulnerabilities
 - source
 - updated
 
-The --allow-new-versions option attempts to parse component versions and ascertain if a discrepancy 
+
+### CSAF Diff
+
+CSAF diffing includes the following fields at this time. Only the vulnerabilities section uses the 
+allows new data option. Fields can be excluded using the -x --exclude as described for bom diffing
+except for title as that is currently being populated by depscan with the bom-ref of the 
+vulnerability as a unique id.
+
+document
+
+product_tree
+
+vulnerabilities
+- acknowledgements
+- cwe
+- cve
+- discovery_date
+- ids
+- notes
+- product_status
+- references
+- scores
+- title
+
+
+## Allowing newer versions
+
+[Currently BOM only] The --allow-new-versions option attempts to parse component versions and ascertain if a discrepancy 
 is attributable to an updated version. Dependency refs and dependents are compared with the version 
 string removed rather than checking for a newer version.
+
+
+## Allowing new data
 
 The --allow-new-data option allows for empty fields in the original BOM not to be reported as a 
 difference when the data is populated in the second specified BOM. It also addresses when a field 
@@ -121,6 +164,7 @@ such as properties is expanded, checking that all original elements are still pr
 additional elements in the newer BOM.
 
 The --components-only option only analyzes components, not services, dependencies, or other data.
+
 
 ## Specifying fields to exclude
 
@@ -168,7 +212,8 @@ The first key located from the provided keys that is present in the object will 
 excluded_fields = []
 sort_keys = ["url", "content", "ref", "name", "value"]
 
-[bom_settings]
+[preset_settings]
+type = "bom"
 allow_new_data = false
 allow_new_versions = true
 components_only = false

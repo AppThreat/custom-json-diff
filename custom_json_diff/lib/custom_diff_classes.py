@@ -39,10 +39,11 @@ class Options:  # type: ignore
             self.sort_keys = ["url", "content", "ref", "name", "value", "location"]
         elif self.config:
             toml_data = import_config(self.config)
-            self.allow_new_versions = toml_data.get("preconfigured_diff_type", {}).get(
+            self.preconfig_type = toml_data.get("preset_settings", {}).get("type", "")
+            self.allow_new_versions = toml_data.get("preset_settings", {}).get(
                 "allow_new_versions", False)
-            self.allow_new_data = toml_data.get("preconfigured_diff_type", {}).get("allow_new_data", False)
-            self.report_template = toml_data.get("preconfigured_diff_type", {}).get("report_template", "")
+            self.allow_new_data = toml_data.get("preset_settings", {}).get("allow_new_data", False)
+            self.report_template = toml_data.get("preset_settings", {}).get("report_template", "")
             self.sort_keys = toml_data.get("settings", {}).get("sort_keys", [])
             self.exclude = toml_data.get("settings", {}).get("excluded_fields", [])
             self.include = toml_data.get("settings", {}).get("include_extra", [])
@@ -55,7 +56,7 @@ class Options:  # type: ignore
             self.sort_keys.extend(["purl", "bom-ref", "content", "cve", "id", "url", "text", "ref", "name", "value", "location"])
         elif self.preconfig_type == "csaf":
             self.exclude.extend(["document.tracking"])
-            self.sort_keys.extend(["text", "product_id", "url"])
+            self.sort_keys.extend(["title", "text", "product_id", "url"])
         self.exclude = list(set(self.exclude))
         self.include = list(set(self.include))
         self.comp_keys = list(set(self.comp_keys))
@@ -287,6 +288,14 @@ class BomDicts:
                 "services": len(self.services), "dependencies": len(self.dependencies),
                 "vulnerabilities": len(self.vdrs)}
 
+    def get_refs(self) -> Dict:
+        return {
+            "components": {i.bom_ref for i in self.components},
+            "dependencies": {i.ref for i in self.dependencies},
+            "services": {i.search_key for i in self.services},
+            "vdrs": {i.bom_ref for i in self.vdrs}
+        }
+
     def to_summary(self) -> Dict:
         summary: Dict = {self.filename: {}}
         if self.components:
@@ -498,6 +507,9 @@ class CsafDicts:
             vulnerabilities=vulnerabilities
         )
 
+    def get_refs(self):
+        return {"vulnerabilities": {i.title for i in self.vulnerabilities}}
+
     def intersection(self, other, title: str = "") -> "CsafDicts":
         document = self.document.intersection(other.document)
         product_tree = self.product_tree.intersection(other.product_tree)
@@ -512,15 +524,15 @@ class CsafDicts:
             vulnerabilities=vulnerabilities
         )
 
-    def export(self):
+    def to_dict(self):
         return {
             "document": self.document.to_dict(unflat=True) if self.document else {},
             "product_tree": self.product_tree.to_dict(unflat=True) if self.product_tree else {},
-            "vulnerabilities": [i.to_dict for i in self.vulnerabilities] if self.vulnerabilities else []
+            "vulnerabilities": [i.to_dict() for i in self.vulnerabilities] if self.vulnerabilities else []
         }
 
     def to_summary(self) -> Dict:
-        return {self.filename: {**self.export()}}
+        return {self.filename: self.to_dict()}
 
 
 class CsafVulnerability:
@@ -535,6 +547,7 @@ class CsafVulnerability:
         self.product_status = data.get("product_status", {})
         self.references = data.get("references", [])
         self.scores = data.get("scores", [])
+        self.title = data.get("title", "")
 
     def __eq__(self, other):
         if not self.options.allow_new_data:
@@ -549,7 +562,8 @@ class CsafVulnerability:
             ('notes', lambda self, other: advanced_eq_lists(self.notes, other.notes)), (
             'references',
             lambda self, other: advanced_eq_lists(self.references, other.references)),
-            ('scores', lambda self, other: advanced_eq_lists(self.scores, other.scores)), ]
+            ('scores', lambda self, other: advanced_eq_lists(self.scores, other.scores)),
+            ('title', lambda self, other: self.title == other.title),]
         return not any(
             getattr(self, attr) and not compare(self, other)
             for attr, compare in attributes_to_compare
@@ -568,7 +582,8 @@ class CsafVulnerability:
             "notes": self.notes,
             "product_status": self.product_status,
             "references": self.references,
-            "scores": self.scores
+            "scores": self.scores,
+            "title": self.title
         }
 
 
@@ -736,7 +751,7 @@ def import_bom_dict(
     return other_data, components, services, dependencies, vulnerabilities  # type: ignore
 
 
-def import_csaf(options: "Options", original_data: Dict, document: FlatDicts | None = None,
+def import_csaf(options: "Options", original_data: Dict | None = None, document: FlatDicts | None = None,
                 product_tree: FlatDicts | None = None, vex: List | None = None
                 ) -> Tuple[FlatDicts, FlatDicts, List]:
     if original_data:
@@ -753,11 +768,20 @@ def import_flat_dict(data: Dict | List[FlatElement]) -> List[FlatElement]:
         return []
     if data and isinstance(data, List) and isinstance(data[0], FlatElement):
         return data
+    if not isinstance(data, Dict):
+        raise TypeError("data must be a dict or list of FlatElement")
     flat_dicts = []
     for key, value in data.items():
         ele = FlatElement(key, value)
         flat_dicts.append(ele)
     return flat_dicts
+
+
+def order_documents(doc_1: BomDicts | CsafDicts, doc_2: BomDicts | CsafDicts) -> Tuple:
+    """Ensures we compare boms in the correct order for allow_new_versions and allow_new_data"""
+    if doc_1.options.doc_num == 1:
+        return doc_1, doc_2
+    return doc_2, doc_1
 
 
 def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, List, List, List, List]:
@@ -776,10 +800,3 @@ def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, Li
         if key not in {"components", "dependencies", "services", "vulnerabilities"}:
             other_data |= {key: value}
     return FlatDicts(other_data), components, services, dependencies, vulnerabilities
-
-
-def order_documents(doc_1: BomDicts | CsafDicts, doc_2: BomDicts | CsafDicts) -> Tuple:
-    """Ensures we compare boms in the correct order for allow_new_versions and allow_new_data"""
-    if doc_1.options.doc_num == 1:
-        return doc_1, doc_2
-    return doc_2, doc_1
