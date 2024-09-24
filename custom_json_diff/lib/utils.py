@@ -53,18 +53,24 @@ def compare_date(dt1: str, dt2: str, comparator: str):
         return False
 
 
-def compare_generic(version_1: str | date | semver.Version, version_2: str | date | semver.Version, comparator):
-    match comparator:
-        case "<":
-            return version_1 < version_2  #type: ignore
-        case ">":
-            return version_1 > version_2  #type: ignore
-        case "<=":
-            return version_1 <= version_2  #type: ignore
-        case ">=":
-            return version_1 >= version_2  #type: ignore
-        case _:
-            return version_1 == version_2  #type: ignore
+def compare_generic(a: str | date | semver.Version, b: str | date | semver.Version, comparator):
+    if isinstance(a, str) and a.isnumeric() and isinstance(b, str) and b.isnumeric():
+        a = int(a)  #type: ignore
+        b = int(b)  #type: ignore
+    try:
+        match comparator:
+            case "<":
+                return a < b  #type: ignore
+            case ">":
+                return a > b  #type: ignore
+            case "<=":
+                return a <= b  #type: ignore
+            case ">=":
+                return a >= b  #type: ignore
+            case _:
+                return a == b  #type: ignore
+    except TypeError:
+        return compare_generic(str(a), str(b), comparator)
 
 
 def compare_recommendations(v1: str, v2: str, comparator: str):
@@ -93,6 +99,26 @@ def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
         logger.debug("Could not parse one or more of these versions: %s, %s", v1, v2)
         return False
     return compare_generic(version_1, version_2, comparator)  #type: ignore
+
+
+def manual_version_compare(v1: str, v2: str, comparator: str) -> bool:
+    if "." not in v1 or "." not in v2:
+        return compare_generic(v1, v2, comparator)
+    version_1 = v1.replace("-", ".").split(".")
+    version_2 = v2.replace("-", ".").split(".")
+    if (v1_len := len(version_1)) != (v2_len := len(version_2)):
+        if v1_len > v2_len:
+            diff_len = v1_len - v2_len
+            version_2.extend(["0"] * diff_len)
+        else:
+            diff_len = v2_len - v1_len
+            version_1.extend(["0"] * diff_len)
+    if "=" not in comparator:
+        comparator += "="
+    for i, v in enumerate(version_1):
+        if not compare_generic(v, version_2[i], comparator):
+            return False
+    return True
 
 
 def export_html_report(outfile: str, diffs: Dict, options: "Options", status: int,
