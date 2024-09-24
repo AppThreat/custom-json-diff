@@ -572,6 +572,10 @@ class CsafVulnerability:
     def __ne__(self, other):
         return not self == other
 
+    def clear(self):
+        options = self.options
+        self.__init__(data={}, options=options)
+
     def to_dict(self):
         return {
             "acknowledgements": self.acknowledgements,
