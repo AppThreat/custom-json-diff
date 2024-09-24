@@ -113,6 +113,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>{{ key }}:</li>
                                         <ul>
@@ -132,6 +162,36 @@
                                 {% for key, value in item|items %}
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>{{ key }}:</li>
@@ -159,6 +219,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -182,6 +272,36 @@
                                 {% for key, value in item|items %}
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
@@ -213,6 +333,36 @@
                                     {% if value != "" and key not in ["hashes", "licenses", "properties", "evidence"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -236,6 +386,36 @@
                                 {% for key, value in item|items %}
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
@@ -267,6 +447,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -291,6 +501,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -309,328 +549,326 @@
                     {% endfor %}</td>
                 </tr>
             {% endif %}
-            {% if not comp_only %}
-                {% if diff_services_1 or diff_services_2 %}
-                    <tr>
-                        <th>services<br><br>{{ diff_services_1 | length }}
-                            vs {{ diff_services_2 | length }}</th>
-                        <td>{% for item in diff_services_1 %}
-                            <details>
-                                <summary>{{ item['name'] }}</summary>
-                                <ul>
-                                    {% for key, value in item|items %}
-                                        {% if value != "" %}
-                                            <li>{{ key }}: {{ value }}</li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                        <td>{% for item in diff_services_2 %}
-                            <details>
-                                <summary>{{ item['name'] }}</summary>
-                                <ul>
-                                    {% for key, value in item|items %}
-                                        {% if value != "" %}
-                                            <li>{{ key }}: {{ value }}</li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                    </tr>
-                {% endif %}
-                {% if diff_deps_1 or diff_deps_2 %}
-                    <tr>
-                        <th>dependencies<br><br>{{ diff_deps_1 | length }}
-                            vs {{ diff_deps_2 | length }}</th>
-                        <td>{% for item in diff_deps_1 %}
-                            <details>
-                                <summary>{{ item['short_ref'] }}</summary>
-                                <ul>
-                                    <li>ref: {{ item['ref'] }}</li>
-                                    {% if item['dependsOn']|length > 0 %}
-                                        <li>dependencies:</li>
-                                        <ul>
-                                            {% for dep in item['dependsOn'] %}
-                                                <li>{{ dep }}</li>
-                                            {% endfor %}
-                                        </ul>
+            {% if diff_services_1 or diff_services_2 %}
+                <tr>
+                    <th>services<br><br>{{ diff_services_1 | length }}
+                        vs {{ diff_services_2 | length }}</th>
+                    <td>{% for item in diff_services_1 %}
+                        <details>
+                            <summary>{{ item['name'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value != "" %}
+                                        <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
-                                    {% if item['dependsOn']|length == 0 %}
-                                        <li>dependencies: N/A</li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                    <td>{% for item in diff_services_2 %}
+                        <details>
+                            <summary>{{ item['name'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value != "" %}
+                                        <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                        <td>{% for item in diff_deps_2 %}
-                            <details>
-                                <summary>{{ item['short_ref'] }}</summary>
-                                <ul>
-                                    <li>ref: {{ item['ref'] }}</li>
-                                    {% if item['dependsOn']|length > 0 %}
-                                        <li>dependencies:</li>
-                                        <ul>
-                                            {% for dep in item['dependsOn'] %}
-                                                <li>{{ dep }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% endif %}
-                                    {% if item['dependsOn']|length == 0 %}
-                                        <li>dependencies: N/A</li>
-                                    {% endif %}
-                                </ul>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
+            {% if diff_deps_1 or diff_deps_2 %}
+                <tr>
+                    <th>dependencies<br><br>{{ diff_deps_1 | length }}
+                        vs {{ diff_deps_2 | length }}</th>
+                    <td>{% for item in diff_deps_1 %}
+                        <details>
+                            <summary>{{ item['short_ref'] }}</summary>
+                            <ul>
+                                <li>ref: {{ item['ref'] }}</li>
+                                {% if item['dependsOn']|length > 0 %}
+                                    <li>dependencies:</li>
+                                    <ul>
+                                        {% for dep in item['dependsOn'] %}
+                                            <li>{{ dep }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                {% if item['dependsOn']|length == 0 %}
+                                    <li>dependencies: N/A</li>
+                                {% endif %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                    <td>{% for item in diff_deps_2 %}
+                        <details>
+                            <summary>{{ item['short_ref'] }}</summary>
+                            <ul>
+                                <li>ref: {{ item['ref'] }}</li>
+                                {% if item['dependsOn']|length > 0 %}
+                                    <li>dependencies:</li>
+                                    <ul>
+                                        {% for dep in item['dependsOn'] %}
+                                            <li>{{ dep }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                {% if item['dependsOn']|length == 0 %}
+                                    <li>dependencies: N/A</li>
+                                {% endif %}
+                            </ul>
 
-                            </details>
-                        {% endfor %}</td>
-                    </tr>
-                {% endif %}
-                {% if diff_vdrs_1 or diff_vdrs_2 %}
-                    <tr>
-                        <th>vulnerabilities<br><br>{{ diff_vdrs_1 | length }}
-                            vs {{ diff_vdrs_2 | length }}</th>
-                        <td>{% for item in diff_vdrs_1 %}
-                            <details>
-                                <summary>{{ item['bom-ref'] }}</summary>
-                                <ul>
-                                    {% for key, value in item|items %}
-                                        {% if value and key not in ["advisories","analysis","cwes","properties"] %}
-                                            {% if key == "source" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for skey, svalue in value|items %}
-                                                                <li>{{ skey }}: {{ svalue }}</li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "ratings" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for rating in value %}
-                                                                <li>
-                                                                    <details>
-                                                                        <summary>{{ rating["vector"] }}:</summary>
-                                                                        <ul>
-                                                                            {% for rkey, rvalue in rating|items %}
-                                                                                <li>{{ rkey }}: {{ rvalue }}</li>
-                                                                            {% endfor %}
-                                                                        </ul>
-                                                                    </details>
-                                                                </li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "references" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for ref in value %}
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
+            {% if diff_vdrs_1 or diff_vdrs_2 %}
+                <tr>
+                    <th>vulnerabilities<br><br>{{ diff_vdrs_1 | length }}
+                        vs {{ diff_vdrs_2 | length }}</th>
+                    <td>{% for item in diff_vdrs_1 %}
+                        <details>
+                            <summary>{{ item['bom-ref'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value and key not in ["advisories","analysis","cwes","properties"] %}
+                                        {% if key == "source" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for skey, svalue in value|items %}
+                                                            <li>{{ skey }}: {{ svalue }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "ratings" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for rating in value %}
+                                                            <li>
                                                                 <details>
-                                                                    <summary>{{ ref['id'] }}:</summary>
+                                                                    <summary>{{ rating["vector"] }}:</summary>
                                                                     <ul>
-                                                                        <li>
-                                                                            name: {{ ref['source']['name'] }}</li>
-                                                                        <li>
-                                                                            url: {{ ref['source']['url'] }}</li>
-                                                                    </ul>
-                                                                </details>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "affects" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for affect in value %}
-                                                                <details>
-                                                                    <summary>{{ affect['ref'] }}:</summary>
-                                                                    <ul>
-                                                                        {% for a in affect['versions'] %}
-                                                                            <li>{{ a }}</li>
+                                                                        {% for rkey, rvalue in rating|items %}
+                                                                            <li>{{ rkey }}: {{ rvalue }}</li>
                                                                         {% endfor %}
                                                                     </ul>
                                                                 </details>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "detail" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            <li>{{ value }}</li>
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key not in ["source","ratings","references","affects","detail"] %}
-                                                <li>{{ key }}: {{ value }}</li>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if key in ["advisories","cwes","properties"] and value|length > 0 %}
-                                            <li>
-                                                <details>
-                                                    <summary>{{ key }}:</summary>
-                                                    <ul>
-                                                        {% for i in value %}
-                                                            <li>{{ i }}</li>
+                                                            </li>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
                                             </li>
                                         {% endif %}
-                                        {% if key == "analysis" and value|length > 0 %}
+                                        {% if key == "references" %}
                                             <li>
                                                 <details>
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
-                                                        {% for a,b in value|items %}
-                                                            <li>{{ a }}: {{ b }}</li>
+                                                        {% for ref in value %}
+                                                            <details>
+                                                                <summary>{{ ref['id'] }}:</summary>
+                                                                <ul>
+                                                                    <li>
+                                                                        name: {{ ref['source']['name'] }}</li>
+                                                                    <li>
+                                                                        url: {{ ref['source']['url'] }}</li>
+                                                                </ul>
+                                                            </details>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
                                             </li>
                                         {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                        <td>{% for item in diff_vdrs_2 %}
-                            <details>
-                                <summary>{{ item['bom-ref'] }}</summary>
-                                <ul>
-                                    {% for key, value in item|items %}
-                                        {% if value and key not in ["advisories","analysis","cwes","properties"] %}
-                                            {% if key == "source" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for skey, svalue in value|items %}
-                                                                <li>{{ skey }}: {{ svalue }}</li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "ratings" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for rating in value %}
-                                                                <li>
-                                                                    <details>
-                                                                        <summary>{{ rating["vector"] }}:</summary>
-                                                                        <ul>
-                                                                            {% for rkey, rvalue in rating|items %}
-                                                                                <li>{{ rkey }}: {{ rvalue }}</li>
-                                                                            {% endfor %}
-                                                                        </ul>
-                                                                    </details>
-                                                                </li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "references" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for ref in value %}
+                                        {% if key == "affects" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for affect in value %}
+                                                            <details>
+                                                                <summary>{{ affect['ref'] }}:</summary>
+                                                                <ul>
+                                                                    {% for a in affect['versions'] %}
+                                                                        <li>{{ a }}</li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </details>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "detail" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        <li>{{ value }}</li>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key not in ["source","ratings","references","affects","detail"] %}
+                                            <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if key in ["advisories","cwes","properties"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "analysis" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for a,b in value|items %}
+                                                        <li>{{ a }}: {{ b }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                    <td>{% for item in diff_vdrs_2 %}
+                        <details>
+                            <summary>{{ item['bom-ref'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value and key not in ["advisories","analysis","cwes","properties"] %}
+                                        {% if key == "source" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for skey, svalue in value|items %}
+                                                            <li>{{ skey }}: {{ svalue }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "ratings" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for rating in value %}
+                                                            <li>
                                                                 <details>
-                                                                    <summary>{{ ref['id'] }}:</summary>
+                                                                    <summary>{{ rating["vector"] }}:</summary>
                                                                     <ul>
-                                                                        <li>
-                                                                            name: {{ ref['source']['name'] }}</li>
-                                                                        <li>
-                                                                            url: {{ ref['source']['url'] }}</li>
-                                                                    </ul>
-                                                                </details>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "affects" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for affect in value %}
-                                                                <details>
-                                                                    <summary>{{ affect['ref'] }}:</summary>
-                                                                    <ul>
-                                                                        {% for a in affect['versions'] %}
-                                                                            <li>{{ a }}</li>
+                                                                        {% for rkey, rvalue in rating|items %}
+                                                                            <li>{{ rkey }}: {{ rvalue }}</li>
                                                                         {% endfor %}
                                                                     </ul>
                                                                 </details>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "detail" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            <li>{{ value }}</li>
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key not in ["source","ratings","references","affects","detail"] %}
-                                                <li>{{ key }}: {{ value }}</li>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if key in ["advisories","cwes","properties"] and value|length > 0 %}
-                                            <li>
-                                                <details>
-                                                    <summary>{{ key }}:</summary>
-                                                    <ul>
-                                                        {% for i in value %}
-                                                            <li>{{ i }}</li>
+                                                            </li>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
                                             </li>
                                         {% endif %}
-                                        {% if key == "analysis" and value|length > 0 %}
+                                        {% if key == "references" %}
                                             <li>
                                                 <details>
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
-                                                        {% for a,b in value|items %}
-                                                            <li>{{ a }}: {{ b }}</li>
+                                                        {% for ref in value %}
+                                                            <details>
+                                                                <summary>{{ ref['id'] }}:</summary>
+                                                                <ul>
+                                                                    <li>
+                                                                        name: {{ ref['source']['name'] }}</li>
+                                                                    <li>
+                                                                        url: {{ ref['source']['url'] }}</li>
+                                                                </ul>
+                                                            </details>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
                                             </li>
                                         {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                    </tr>
-                {% endif %}
+                                        {% if key == "affects" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for affect in value %}
+                                                            <details>
+                                                                <summary>{{ affect['ref'] }}:</summary>
+                                                                <ul>
+                                                                    {% for a in affect['versions'] %}
+                                                                        <li>{{ a }}</li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </details>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "detail" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        <li>{{ value }}</li>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key not in ["source","ratings","references","affects","detail"] %}
+                                            <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if key in ["advisories","cwes","properties"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "analysis" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for a,b in value|items %}
+                                                        <li>{{ a }}: {{ b }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
             {% endif %}
         </table>
     </div>
@@ -664,6 +902,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -693,6 +961,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -721,6 +1019,36 @@
                                 {% for key, value in item|items %}
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
                                     {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
@@ -752,6 +1080,36 @@
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
                                         <li>{{ key }}: {{ value }}</li>
                                     {% endif %}
+                                    {% if key == "evidence" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for k, v in value|items %}
+                                                        <details>
+                                                            <summary>{{ k }}:</summary>
+                                                            <ul>
+                                                                {% for a, b in v|items %}
+                                                                    {% if a != "methods" %}
+                                                                        <li>{{ a }}: {{ b }}</li>
+                                                                    {% endif %}
+                                                                    {% if a == "methods" %}
+                                                                        <li>{{ a }}:</li>
+                                                                        <ul>
+                                                                            {% for i in b %}
+                                                                                <li>{{ i }}</li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    {% endif %}
+                                                                {% endfor %}
+
+                                                            </ul>
+                                                        </details>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
                                     {% if key in ["properties","hashes","licenses","externalReferences"] and value|length > 0 %}
                                         <li>
                                             <details>
@@ -770,175 +1128,172 @@
                     {% endfor %}</td>
                 </tr>
             {% endif %}
-            {% if not comp_only %}
-                {% if common_services %}
-                    <tr>
-                        <th style="width: 8%">services</th>
-                        <td style="width: 41%">{% for item in common_services %}
-                            <details>
-                                <summary>{{ item['name'] }}</summary>
-                                <ul>
-                                    {% for key, value in item|items %}
-                                        {% if value != "" %}
-                                            <li>{{ key }}: {{ value }}</li>
+            {% if common_services %}
+                <tr>
+                    <th style="width: 8%">services</th>
+                    <td style="width: 41%">{% for item in common_services %}
+                        <details>
+                            <summary>{{ item['name'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value != "" %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
+            {% if common_deps %}
+                <tr>
+                    <th style="width: 8%">dependencies</th>
+                    <td style="width: 41%">{% for item in common_deps %}
+                        <details>
+                            <summary>{{ item['short_ref'] }}</summary>
+                            <ul>
+                                <li>ref: {{ item['ref'] }}</li>
+                                {% if item['dependsOn']|length >0 %}
+                                    <li>dependencies:
+                                        <ul>
+                                            {% for dep in item['dependsOn'] %}
+                                                <li>{{ dep }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
+                                {% endif %}
+                                {% if item['dependsOn']|length == 0 %}
+                                    <li>dependencies: N/A</li>
+                                {% endif %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
+            {% endif %}
+            {% if common_vdrs %}
+                <tr>
+                    <th style="width: 8%">vulnerabilities</th>
+                    <td>{% for item in common_vdrs %}
+                        <details>
+                            <summary>{{ item['bom-ref'] }}</summary>
+                            <ul>
+                                {% for key, value in item|items %}
+                                    {% if value and key not in ["advisories","analysis","cwes","properties"] %}
+                                        {% if key == "source" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for skey, svalue in value|items %}
+                                                            <li>{{ skey }}: {{ svalue }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
                                         {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                    </tr>
-                {% endif %}
-                {% if common_deps %}
-                    <tr>
-                        <th style="width: 8%">dependencies</th>
-                        <td style="width: 41%">                {% for item in common_deps %}
-                            <details>
-                                <summary>{{ item['short_ref'] }}</summary>
-                                <ul>
-                                    <li>ref: {{ item['ref'] }}</li>
-                                    {% if item['dependsOn']|length >0 %}
-                                        <li>dependencies:
-                                            <ul>
-                                                {% for dep in item['dependsOn'] %}
-                                                    <li>{{ dep }}</li>
-                                                {% endfor %}
-                                            </ul>
-                                        </li>
-                                    {% endif %}
-                                    {% if item['dependsOn']|length == 0 %}
-                                        <li>dependencies: N/A</li>
-                                    {% endif %}
-                                </ul>
-
-                            </details>
-                        {% endfor %}</td>
-                    </tr>
-                {% endif %}
-                {% if common_vdrs %}
-                    <tr>
-                        <th style="width: 8%">vulnerabilities</th>
-                        <td>{% for item in common_vdrs %}
-                            <details>
-                                <summary>{{ item['bom-ref'] }}</summary>
-                                <ul>
-                                    {% for key, value in item|items %}
-                                        {% if value and key not in ["advisories","analysis","cwes","properties"] %}
-                                            {% if key == "source" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for skey, svalue in value|items %}
-                                                                <li>{{ skey }}: {{ svalue }}</li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "ratings" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for rating in value %}
-                                                                <li>
-                                                                    <details>
-                                                                        <summary>{{ rating["vector"] }}:</summary>
-                                                                        <ul>
-                                                                            {% for rkey, rvalue in rating|items %}
-                                                                                <li>{{ rkey }}: {{ rvalue }}</li>
-                                                                            {% endfor %}
-                                                                        </ul>
-                                                                    </details>
-                                                                </li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "references" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for ref in value %}
+                                        {% if key == "ratings" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for rating in value %}
+                                                            <li>
                                                                 <details>
-                                                                    <summary>{{ ref['id'] }}:</summary>
+                                                                    <summary>{{ rating["vector"] }}:</summary>
                                                                     <ul>
-                                                                        <li>
-                                                                            name: {{ ref['source']['name'] }}</li>
-                                                                        <li>
-                                                                            url: {{ ref['source']['url'] }}</li>
-                                                                    </ul>
-                                                                </details>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "affects" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            {% for affect in value %}
-                                                                <details>
-                                                                    <summary>{{ affect['ref'] }}:</summary>
-                                                                    <ul>
-                                                                        {% for a in affect['versions'] %}
-                                                                            <li>{{ a }}</li>
+                                                                        {% for rkey, rvalue in rating|items %}
+                                                                            <li>{{ rkey }}: {{ rvalue }}</li>
                                                                         {% endfor %}
                                                                     </ul>
                                                                 </details>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key == "detail" %}
-                                                <li>
-                                                    <details>
-                                                        <summary>{{ key }}:</summary>
-                                                        <ul>
-                                                            <li>{{ value }}</li>
-                                                        </ul>
-                                                    </details>
-                                                </li>
-                                            {% endif %}
-                                            {% if key not in ["source","ratings","references","affects","detail"] %}
-                                                <li>{{ key }}: {{ value }}</li>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if key in ["advisories","cwes","properties"] and value|length > 0 %}
-                                            <li>
-                                                <details>
-                                                    <summary>{{ key }}:</summary>
-                                                    <ul>
-                                                        {% for i in value %}
-                                                            <li>{{ i }}</li>
+                                                            </li>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
                                             </li>
                                         {% endif %}
-                                        {% if key == "analysis" and value|length > 0 %}
+                                        {% if key == "references" %}
                                             <li>
                                                 <details>
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
-                                                        {% for a,b in value|items %}
-                                                            <li>{{ a }}: {{ b }}</li>
+                                                        {% for ref in value %}
+                                                            <details>
+                                                                <summary>{{ ref['id'] }}:</summary>
+                                                                <ul>
+                                                                    <li>
+                                                                        name: {{ ref['source']['name'] }}</li>
+                                                                    <li>
+                                                                        url: {{ ref['source']['url'] }}</li>
+                                                                </ul>
+                                                            </details>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
                                             </li>
                                         {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </details>
-                        {% endfor %}</td>
-                    </tr>
-                {% endif %}
+                                        {% if key == "affects" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        {% for affect in value %}
+                                                            <details>
+                                                                <summary>{{ affect['ref'] }}:</summary>
+                                                                <ul>
+                                                                    {% for a in affect['versions'] %}
+                                                                        <li>{{ a }}</li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </details>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key == "detail" %}
+                                            <li>
+                                                <details>
+                                                    <summary>{{ key }}:</summary>
+                                                    <ul>
+                                                        <li>{{ value }}</li>
+                                                    </ul>
+                                                </details>
+                                            </li>
+                                        {% endif %}
+                                        {% if key not in ["source","ratings","references","affects","detail"] %}
+                                            <li>{{ key }}: {{ value }}</li>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if key in ["advisories","cwes","properties"] and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for i in value %}
+                                                        <li>{{ i }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                    {% if key == "analysis" and value|length > 0 %}
+                                        <li>
+                                            <details>
+                                                <summary>{{ key }}:</summary>
+                                                <ul>
+                                                    {% for a,b in value|items %}
+                                                        <li>{{ a }}: {{ b }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </details>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}</td>
+                </tr>
             {% endif %}
         </table>
     </div>
