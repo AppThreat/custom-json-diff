@@ -94,10 +94,7 @@ def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
         version_2: str|semver.Version|None = semver.Version.parse(v2)
     except ValueError:
         logger.debug("Could not parse one or more of these versions: %s, %s", v1, v2)
-        version_1, version_2 = v1, v2
-    except TypeError:
-        logger.debug("Could not parse one or more of these versions: %s, %s", v1, v2)
-        return False
+        return manual_version_compare(v1, v2, comparator)
     return compare_generic(version_1, version_2, comparator)  #type: ignore
 
 

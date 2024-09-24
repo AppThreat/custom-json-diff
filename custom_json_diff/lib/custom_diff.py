@@ -200,11 +200,11 @@ def load_json(json_file: str, options: "Options") -> "BomDicts|CsafDicts|FlatDic
         logger.error("Invalid JSON: %s", json_file)
         sys.exit(1)
     if options.preconfig_type == "bom":
-        data = sort_dict_lists(data, ["bom-ref", "cve", "id", "url", "text", "content", "ref", "name", "value"])
+        data = sort_dict_lists(data, options.sort_keys)
         data = filter_dict(data, options).to_dict(unflat=True)
         return BomDicts(options, json_file, data)
     if options.preconfig_type == "csaf":
-        data = sort_dict_lists(data, ["text", "url", "product_id"])
+        data = sort_dict_lists(data, options.sort_keys)
         data = filter_dict(data, options).to_dict(unflat=True)
         return CsafDicts(options, json_file, data)
     return filter_dict(data, options)

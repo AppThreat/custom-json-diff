@@ -24,7 +24,6 @@ def build_args() -> argparse.Namespace:
         preconfig_diff_type="",
         allow_new_versions=False,
         report_template="",
-        components_only=False,
         exclude=[],
         allow_new_data=False,
         include=[]
