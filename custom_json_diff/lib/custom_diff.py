@@ -21,16 +21,19 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+purl_regex = re.compile(r"[^/]+/[^/]+@[^?\s]+")
 
 
 def add_short_ref_for_report(diffs: Dict, options: "Options") -> Dict:
-    purl_regex = re.compile(r"[^/]+/[^/]+@[^?\s]+")
     diffs["diff_summary"][options.file_1]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_1].get("dependencies", []), purl_regex)
     diffs["diff_summary"][options.file_2]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
         diffs["common_summary"].get("dependencies", []), purl_regex)
+    diffs["diff_summary"][options.file_1] = filter_empty(options.include_empty, diffs["diff_summary"][options.file_1])
+    diffs["diff_summary"][options.file_2] = filter_empty(options.include_empty, diffs["diff_summary"][options.file_2])
+    diffs["common_summary"] = filter_empty(options.include_empty, diffs["common_summary"])
     return diffs
 
 
@@ -215,7 +218,8 @@ def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Tuple[int, Dict]:
     common_bom = b1.intersection(b2, "common_summary")
     output = common_bom.to_summary()
     status, diffs = summarize_bom_diffs(b1, b2, common_bom)
-    return status, {"diff_summary": diffs, **output}
+    output |= {"diff_summary": diffs}
+    return status, output
 
 
 def perform_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts) -> Tuple[int, Dict]:
@@ -223,7 +227,8 @@ def perform_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts) -> Tuple[int, Dict]:
     common_csaf = c1.intersection(c2, "common_summary")
     output = common_csaf.to_summary()
     status, diffs = summarize_csaf_diffs(c1, c2, common_csaf)
-    return status, {"diff_summary": diffs, **output}
+    output |= {"diff_summary": diffs}
+    return status, output
 
 
 def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2: BomDicts) -> None:
@@ -237,8 +242,6 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
             export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
                            calculate_pcts(diffs, j1, j2))
             diffs = unpack_misc_data(diffs, j1.options)
-            export_html_report(report_file, add_short_ref_for_report(diffs, options), options,
-                               status, calculate_pcts(diffs, j1, j2))
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
     if options.output:
