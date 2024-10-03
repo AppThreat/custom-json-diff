@@ -90,6 +90,14 @@ def build_args() -> argparse.Namespace:
         help="BOM only - include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
         dest="include",
     )
+    parser_pc_diff.add_argument(
+        "--include-empty",
+        "-e",
+        action="store_true",
+        default=False,
+        dest="include_empty",
+        help="Include keys with empty values in summary.",
+    )
     parser.add_argument(
         "-x",
         "--exclude",
@@ -127,6 +135,7 @@ def main():
         file_2=args.input[1],
         output=args.output,
         report_template=args.report_template,
+        include_empty=args.include_empty
     )
     result, j1, j2 = compare_dicts(options)
     if preset_type == "bom":

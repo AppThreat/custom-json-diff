@@ -146,6 +146,12 @@ def file_write(filename: LiteralString | str | bytes, contents, error_msg: str =
             log.debug("File written: %s", filename)
 
 
+def filter_empty(include_empty: bool, d: Dict) -> Dict:
+    if not include_empty:
+        return {k: v for k, v in d.items() if v}
+    return d
+
+
 def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
     return next((i for i in sort_keys if i in data), False)
 

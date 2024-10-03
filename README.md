@@ -64,8 +64,8 @@ CJD offers advanced diffing for Cyclonedx BOM (v1.5 or v1.6) produced by
 The `preset-diff --type bom` command compares CycloneDx BOM components, services, and dependencies, as well as data 
 outside of these parts. 
 
-Some fields are excluded from the component comparison by default but can be explicitly specified 
-for inclusion using `preset-diff --include-extra` and whichever field(s) you wish to include (e.g. 
+Some component fields are excluded from the component comparison by default but can be explicitly 
+specified for inclusion using `preset-diff --include-extra` and whichever field(s) you wish to include (e.g. 
 `--include-extra properties,evidence,licenses`:
 - properties
 - evidence
@@ -149,14 +149,14 @@ vulnerabilities
 - title
 
 
-## Allowing newer versions
+### Allowing newer versions
 
-[Currently BOM only] The --allow-new-versions option attempts to parse component versions and ascertain if a discrepancy 
-is attributable to an updated version. Dependency refs and dependents are compared with the version 
-string removed rather than checking for a newer version.
+[Currently BOM only] The --allow-new-versions option attempts to parse component versions and 
+ascertain if a discrepancy is attributable to an updated version. Dependency refs and dependents 
+are compared with the version string removed rather than checking for a newer version.
 
 
-## Allowing new data
+### Allowing new data
 
 The --allow-new-data option allows for empty fields in the original BOM not to be reported as a 
 difference when the data is populated in the second specified BOM. It also addresses when a field 
@@ -164,6 +164,53 @@ such as properties is expanded, checking that all original elements are still pr
 additional elements in the newer BOM.
 
 The --components-only option only analyzes components, not services, dependencies, or other data.
+
+### Report Template
+
+You may use the builtin report templates or create one of your own. The variables available to you
+for each preset type are as follows.
+
+**BOM**
+* common_lib
+* common_frameworks
+* common_services
+* common_deps
+* common_apps
+* common_other
+* common_vdrs
+* diff_lib_1
+* diff_lib_2
+* diff_frameworks_1
+* diff_frameworks_2
+* diff_apps_1
+* diff_apps_2
+* diff_other_1
+* diff_other_2
+* diff_services_1
+* diff_services_2
+* diff_deps_1
+* diff_deps_2
+* diff_vdrs_1
+* diff_vdrs_2
+* bom_1 (filename)
+* bom_2
+* stats (this is a statistic summary)
+* metadata (a bool to indicate if misc_data passed)
+* diff_status (integer representing the diff status)
+
+**CSAF**
+* common_document
+* common_product_tree
+* common_vulnerabilities
+* diff_document_1
+* diff_document_2
+* diff_product_tree_1
+* diff_product_tree_2
+* diff_vulnerabilities_1
+* diff_vulnerabilities_2
+* diff_status (integer representing the diff status)
+* csaf_1 (filename)
+* csaf_2
 
 
 ## Specifying fields to exclude
@@ -203,7 +250,8 @@ be, check out json-flatten, which is the package used for this function.
 
 custom-json-diff will sort the imported JSON alphabetically. If your JSON document contains arrays 
 of objects, you will need to specify any keys you want to sort by in a toml file or use a preset.
-The first key located from the provided keys that is present in the object will be used for sorting.
+The first key located from the provided keys that is present in the object will be used, so order
+any keys provided accordingly.
 
 ## TOML config file example
 

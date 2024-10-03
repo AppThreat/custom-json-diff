@@ -3,9 +3,8 @@ from copy import deepcopy
 
 import pytest
 
-from custom_json_diff.lib.custom_diff import compare_dicts, perform_bom_diff, perform_csaf_diff
-from custom_json_diff.lib.custom_diff_classes import (
-    BomComponent, BomDicts, CsafDicts, CsafVulnerability, FlatDicts, Options, BomVdr, BomVdrAffects
+from custom_json_diff.lib.custom_diff import compare_dicts, perform_csaf_diff
+from custom_json_diff.lib.custom_diff_classes import (CsafDicts, CsafVulnerability, Options, BomVdr, BomVdrAffects
 )
 
 

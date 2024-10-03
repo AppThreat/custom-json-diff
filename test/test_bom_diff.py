@@ -3,9 +3,9 @@ from copy import deepcopy
 
 import pytest
 
-from custom_json_diff.lib.custom_diff import compare_dicts, perform_bom_diff
+from custom_json_diff.lib.custom_diff import compare_dicts, perform_bom_diff, unpack_misc_data
 from custom_json_diff.lib.custom_diff_classes import (
-    BomComponent, BomDicts, FlatDicts, Options, BomVdr, BomVdrAffects
+    BomComponent, BomDependency, BomDicts, FlatDicts, Options, BomVdr, BomVdrAffects
 )
 
 
@@ -284,6 +284,32 @@ def bom_component_2():
 
 
 @pytest.fixture
+def bom_dependency_1():
+    return BomDependency({
+      "dependsOn": [
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/inherits@2.0.3",
+        "pkg:npm/setprototypeof@1.1.0",
+        "pkg:npm/statuses@1.5.0"
+      ],
+      "ref": "pkg:npm/http-errors@1.6.3"
+    },Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True, doc_num=1))
+
+
+@pytest.fixture
+def bom_dependency_2():
+    return BomDependency({
+      "dependsOn": [
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/inherits@2.1.3",
+        "pkg:npm/setprototypeof@1.1.0",
+        "pkg:npm/statuses@1.5.0"
+      ],
+      "ref": "pkg:npm/http-errors@1.6.3"
+    },Options(file_1="bom_1.json", file_2="bom_2.json", preconfig_type="bom", allow_new_data=True, doc_num=2))
+
+
+@pytest.fixture
 def results():
     with open("test/test_data.json", "r", encoding="utf-8") as f:
         return json.load(f)
@@ -292,7 +318,7 @@ def results():
 def test_bom_diff(results, options_1):
     result, j1, j2 = compare_dicts(options_1)
     _, result_summary = perform_bom_diff(j1, j2)
-    assert result_summary == results["result_4"]
+    assert unpack_misc_data(result_summary, j1.filename, j2.filename) == results["result_4"]
 
 
 def test_bom_diff_component_options(results, bom_dicts_1, bom_dicts_2, bom_dicts_3, bom_dicts_4, bom_dicts_5, bom_dicts_6, bom_dicts_7, bom_dicts_8):
@@ -594,3 +620,23 @@ def test_bom_components_lists(bom_component_1, bom_component_2):
     bom_component_1.options.doc_num = 2
     bom_component_2.options.doc_num = 1
     assert bom_component_1 != bom_component_2
+
+
+def test_bom_dependencies(options_3):
+    options_3_copy = deepcopy(options_3)
+    options_3_copy.doc_num = 2
+    # test neither --allow-new-data or --allow-new-versions
+    bom_1 = BomDependency({"dependsOn": ["pkg:npm/depd@1.1.2", "pkg:npm/inherits@2.0.3"], "ref": "pkg:npm/http-errors@1.6.3"},options_3)
+    bom_2 = BomDependency({"dependsOn": ["pkg:npm/depd@1.1.2", "pkg:npm/inherits@2.0.3"], "ref": "pkg:npm/http-errors@1.6.3"},options_3_copy)
+    assert bom_1 == bom_2
+    bom_1.clear()
+    assert bom_1 != bom_2
+
+    # test --allow-new-data
+    bom_1 = BomDependency({"dependsOn": ["pkg:npm/depd@1.1.2"], "ref": "pkg:npm/http-errors@1.6.3"},options_3)
+    assert bom_1 == bom_2
+
+    # test both --allow-new-data and --allow-new-versions
+    bom_1 = BomDependency({"dependsOn": ["pkg:npm/depd@1.1.2"], "ref": "pkg:npm/http-errors@1.6.1"},options_3)
+    bom_1.options.allow_new_versions = True
+    assert bom_1 == bom_2

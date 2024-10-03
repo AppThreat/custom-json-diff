@@ -11,7 +11,12 @@ from custom_json_diff.lib.custom_diff_classes import (
     BomDicts, CsafDicts, FlatDicts, Options, order_documents
 )
 from custom_json_diff.lib.utils import (
-    export_html_report, json_dump, json_load, logger, sort_dict_lists
+    export_html_report,
+    file_write,
+    filter_empty,
+    json_dump,
+    json_load,
+    sort_dict_lists
 )
 
 if TYPE_CHECKING:
@@ -104,17 +109,21 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
                     diff_summary["components"]["libraries"].append(i.to_dict())  #type: ignore
                 case _:
                     diff_summary["components"]["other_components"].append(i.to_dict())  #type: ignore
-    diff_summary["misc_data"] = (bom.other_data - commons.other_data).to_dict()
-    return diff_summary
+    diff_summary["misc_data"] = (bom.misc_data - commons.misc_data).to_dict()
+    diff_summary["components"] = filter_empty(bom.options.include_empty, diff_summary["components"])
+    return filter_empty(commons.options.include_empty, diff_summary)
 
 
 def generate_csaf_diff(csaf: CsafDicts, commons: CsafDicts, common_refs: Dict[str, Set]) -> Dict:
     return {
-        csaf.filename: {
+        csaf.filename: filter_empty(commons.options.include_empty, {
         "document": (csaf.document - commons.document).to_dict(),
         "product_tree": (csaf.product_tree - commons.product_tree).to_dict(),
-        "vulnerabilities": [i.to_dict() for i in csaf.vulnerabilities if i.title not in common_refs["vulnerabilities"]]
-        }
+        "vulnerabilities": [
+            i.to_dict() for i in csaf.vulnerabilities
+            if i.title not in common_refs["vulnerabilities"]
+        ]
+        })
     }
 
 
@@ -150,7 +159,7 @@ def get_second_bom_diff(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> 
         elif res == 2:
             vdrs.append(i)
     return commons, BomDicts(bom_2.options, bom_2.filename, {},
-                             other_data=bom_2.other_data - bom_1.other_data, components=components,
+                             other_data=bom_2.misc_data - bom_1.misc_data, components=components,
                              services=services, dependencies=dependencies, vulnerabilities=vdrs)
 
 
@@ -237,10 +246,31 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
+            export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
+                           calculate_pcts(diffs, j1, j2))
+            diffs = unpack_misc_data(diffs, j1.filename, j2.filename)
             export_html_report(report_file, add_short_ref_for_report(diffs, options), options,
                                status, calculate_pcts(diffs, j1, j2))
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
+    if options.output:
+        file_write(options.output, diffs,
+                   error_msg=f"Failed to export diff results to {options.output}.",
+                   success_msg=f"Diff results written to {options.output}.")
+    else:
+        logger.warning("No output file specified. No reports generated.")
+
+def unpack_misc_data(diffs: Dict, f1, f2) -> Dict:
+    if misc_data := diffs["common_summary"].get("misc_data"):
+        diffs["common_summary"] |= {**misc_data}
+        del diffs["common_summary"]["misc_data"]
+    if misc_data := diffs["diff_summary"].get(f1, {}).get("misc_data"):
+        diffs["diff_summary"][f1] |= {**misc_data}
+        del diffs["diff_summary"][f1]["misc_data"]
+    if misc_data := diffs["diff_summary"].get(f2, {}).get("misc_data"):
+        diffs["diff_summary"][f2] |= {**misc_data}
+        del diffs["diff_summary"][f2]["misc_data"]
+    return diffs
 
 
 def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:

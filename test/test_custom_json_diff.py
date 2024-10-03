@@ -3,7 +3,7 @@ import json
 import pytest
 
 from custom_json_diff.lib.custom_diff import (
-    compare_dicts, get_diff, load_json
+    compare_dicts, get_diff, json_to_class
 )
 from custom_json_diff.lib.utils import sort_dict_lists
 from custom_json_diff.lib.custom_diff_classes import Options
@@ -11,36 +11,41 @@ from custom_json_diff.lib.custom_diff_classes import Options
 
 @pytest.fixture
 def java_1_flat():
-    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-java.json", options)
+    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-java.json", options)
 
 
 @pytest.fixture
 def java_2_flat():
-    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-java2.json", options)
+    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-java2.json", options)
 
 
 @pytest.fixture
 def python_1_flat():
-    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-python.json", options)
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-python.json", options)
 
 
 @pytest.fixture
 def python_2_flat():
-    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-python2.json", options)
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-python2.json", options)
+
+@pytest.fixture
+def python_3_flat():
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-python2.json", options)
 
 
 @pytest.fixture
 def options_1():
-    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", testing=True, include=["licenses", "hashes"])
+    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
 
 
 @pytest.fixture
 def options_2():
-    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", testing=True)
+    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", exclude=["serialNumber", "metadata.timestamp"])
 
 
 @pytest.fixture
@@ -50,9 +55,9 @@ def results():
 
 
 def test_load_json(java_1_flat, java_2_flat):
-    java_1_flat = java_1_flat.to_dict()
-    assert "serialNumber" not in java_1_flat
-    assert "metadata.timestamp" not in java_1_flat
+    flattened = java_1_flat.to_dict()
+    assert "serialNumber" not in flattened
+    assert "metadata.timestamp" not in flattened
     assert "metadata.tools.components.[].version" not in java_2_flat.to_dict()
 
 
