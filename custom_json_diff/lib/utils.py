@@ -98,6 +98,64 @@ def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
     return compare_generic(version_1, version_2, comparator)  #type: ignore
 
 
+def file_read(filename: LiteralString | str | bytes, binary: bool = False, error_msg: str = "", log: logging.Logger = logger) -> str | bytes:
+    try:
+        if binary:
+            with open(filename, "rb") as f:
+                return f.read()
+        with open(filename, "r", encoding="utf-8") as f:
+            return f.read()
+    except (FileNotFoundError, IsADirectoryError) as e:
+        if error_msg:
+            log.debug(error_msg)
+        else:
+            log.debug(e)
+    return ""
+
+
+def file_write(filename: LiteralString | str | bytes, contents, error_msg: str = "", success_msg: str = "", log: logging.Logger = logger) -> None:
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(contents)
+    except OSError as e:
+        if error_msg:
+            log.debug(error_msg)
+        else:
+            log.debug(e)
+    else:
+        if success_msg:
+            log.info(success_msg)
+        else:
+            log.debug("File written: %s", filename)
+
+
+def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
+
+
+def json_load(json_file: str, error_msg: str = "", log: logging.Logger = logger) -> Dict:
+    try:
+        return json.loads(file_read(json_file, False, error_msg, log))
+    except json.JSONDecodeError as e:
+        log.debug(e)
+        if error_msg:
+            log.warning(error_msg)
+    return {}
+
+
+def json_dump(filename: str, data: Dict, compact: bool = False, error_msg: str = "", success_msg: str = "", log: logging.Logger = logger) -> None:
+    try:
+        if compact:
+            formatted = json.dumps(data, separators=(',', ':'), sort_keys=True)
+        else:
+            formatted = json.dumps(data, indent=2, sort_keys=True)
+    except TypeError as e:
+        if error_msg:
+            log.warning(error_msg)
+        log.debug(e)
+        return
+    file_write(filename, formatted, error_msg=error_msg, success_msg=success_msg, log=log)
+
+
 def manual_version_compare(v1: str, v2: str, comparator: str) -> bool:
     if "." not in v1 or "." not in v2:
         return compare_generic(v1, v2, comparator)
@@ -118,86 +176,56 @@ def manual_version_compare(v1: str, v2: str, comparator: str) -> bool:
     return True
 
 
-def export_html_report(outfile: str, diffs: Dict, options: "Options", status: int,
-                       stats_summary: Dict | None = None) -> None:
-    if options.report_template:
-        template_file = options.report_template
-    else:
-        template_file = options.report_template or os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{options.preconfig_type}_diff_template.j2")
-    with open(template_file, "r", encoding="utf-8") as tmpl_file:
-        template = tmpl_file.read()
-    jinja_env = Environment(autoescape=False)
-    jinja_tmpl = jinja_env.from_string(template)
-    if options.preconfig_type == "bom":
-        report_result = jinja_tmpl.render(
-            common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
-            common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
-            common_services=diffs["common_summary"].get("services", []),
-            common_deps=diffs["common_summary"].get("dependencies", []),
-            common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
-            common_other=diffs["common_summary"].get("components", {}).get("other_components", []),
-            common_vdrs=diffs["common_summary"].get("vulnerabilities", []),
-            diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("libraries", []),
-            diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("libraries", []),
-            diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("frameworks", []),
-            diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("frameworks", []),
-            diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("applications", []),
-            diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("applications", []),
-            diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("other_components", []),
-            diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("other_components", []),
-            diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
-            diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
-            diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
-            diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
-            diff_vdrs_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
-            diff_vdrs_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
-            bom_1=options.file_1,
-            bom_2=options.file_2,
-            stats=stats_summary,
-            metadata=bool(diffs["diff_summary"][options.file_1].get("misc_data", {}) or diffs["diff_summary"][
-            options.file_2].get("misc_data", {})),
-            diff_status=status,
-        )
-    else:
-        report_result = jinja_tmpl.render(
-            common_document=json.dumps(diffs["common_summary"]["document"], indent=2),
-            common_product_tree=json.dumps(diffs["common_summary"]["product_tree"], indent=2),
-            common_vulnerabilities=diffs["common_summary"]["vulnerabilities"],
-            diff_document_1=json.dumps(diffs["diff_summary"][options.file_1]["document"], indent=2),
-            diff_document_2=json.dumps(diffs["diff_summary"][options.file_2]["document"], indent=2),
-            diff_product_tree_1=json.dumps(diffs["diff_summary"][options.file_1]["product_tree"], indent=2),
-            diff_product_tree_2=json.dumps(diffs["diff_summary"][options.file_2]["product_tree"], indent=2),
-            diff_vulnerabilities_1=diffs["diff_summary"][options.file_1]["vulnerabilities"],
-            diff_vulnerabilities_2=diffs["diff_summary"][options.file_2]["vulnerabilities"],
-            diff_status=status,
-            csaf_1=options.file_1,
-            csaf_2=options.file_2,
-        )
-    with open(outfile, "w", encoding="utf-8") as f:
-        f.write(report_result)
-    logger.debug(f"HTML report generated: {outfile}")
+def render_csaf_template(diffs, jinja_tmpl, options, status):
+    return jinja_tmpl.render(
+        common_document=json.dumps(diffs["common_summary"]["document"], indent=2),
+        common_product_tree=json.dumps(diffs["common_summary"]["product_tree"], indent=2),
+        common_vulnerabilities=diffs["common_summary"]["vulnerabilities"],
+        diff_document_1=json.dumps(diffs["diff_summary"][options.file_1]["document"], indent=2),
+        diff_document_2=json.dumps(diffs["diff_summary"][options.file_2]["document"], indent=2),
+        diff_product_tree_1=json.dumps(diffs["diff_summary"][options.file_1]["product_tree"],
+                                       indent=2),
+        diff_product_tree_2=json.dumps(diffs["diff_summary"][options.file_2]["product_tree"],
+                                       indent=2),
+        diff_vulnerabilities_1=diffs["diff_summary"][options.file_1]["vulnerabilities"],
+        diff_vulnerabilities_2=diffs["diff_summary"][options.file_2]["vulnerabilities"],
+        diff_status=status, csaf_1=options.file_1, csaf_2=options.file_2, )
 
 
-def export_results(outfile: str, diffs: Dict) -> None:
-    with open(outfile, "w", encoding="utf-8") as f:
-        f.write(json.dumps(diffs, indent=2))
-    logger.debug(f"JSON report generated: {outfile}")
-
-
-def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
-    return next((i for i in sort_keys if i in data), False)
-
-
-def import_config(config: str) -> Dict:
-    with open(config, "r", encoding="utf-8") as f:
-        try:
-            toml_data = toml.load(f)
-            if toml_data.get("preset_settings") and toml_data["preset_settings"].get("type", "") == "":
-                raise ValueError("Invalid preset type.")
-        except toml.TomlDecodeError:
-            logger.error("Invalid TOML.")
-            sys.exit(1)
-    return toml_data
+def render_bom_template(diffs, jinja_tmpl, options, stats_summary, status):
+    return jinja_tmpl.render(
+        common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
+        common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
+        common_services=diffs["common_summary"].get("services", []),
+        common_deps=diffs["common_summary"].get("dependencies", []),
+        common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
+        common_other=diffs["common_summary"].get("components", {}).get("other_components", []),
+        common_vdrs=diffs["common_summary"].get("vulnerabilities", []),
+        diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
+            "libraries", []),
+        diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
+            "libraries", []),
+        diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
+            "frameworks", []),
+        diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
+            "frameworks", []),
+        diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
+            "applications", []),
+        diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
+            "applications", []),
+        diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
+            "other_components", []),
+        diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
+            "other_components", []),
+        diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
+        diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
+        diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
+        diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
+        diff_vdrs_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
+        diff_vdrs_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
+        bom_1=options.file_1, bom_2=options.file_2, stats=stats_summary, metadata=bool(
+            diffs["diff_summary"][options.file_1].get("misc_data", {}) or diffs["diff_summary"][
+                options.file_2].get("misc_data", {})), diff_status=status, )
 
 
 def sort_dict(result: Dict, sort_keys: List[str]) -> Dict:
