@@ -11,12 +11,7 @@ from custom_json_diff.lib.custom_diff_classes import (
     BomDicts, CsafDicts, FlatDicts, Options, order_documents
 )
 from custom_json_diff.lib.utils import (
-    export_html_report,
-    file_write,
-    filter_empty,
-    json_dump,
-    json_load,
-    sort_dict_lists
+    export_html_report, filter_empty, json_dump, json_load, sort_dict, sort_dict_lists
 )
 
 if TYPE_CHECKING:
@@ -236,41 +231,35 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
         logger.info("No differences found.")
     else:
         logger.info("Differences found.")
-    if options.output:
-        json_dump(options.output, diffs,
-                   error_msg=f"Failed to export diff results to {options.output}.",
-                   success_msg=f"Diff results written to {options.output}.")
-    else:
-        logger.debug("No output file specified. No reports generated.")
-        return
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
             export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
                            calculate_pcts(diffs, j1, j2))
-            diffs = unpack_misc_data(diffs, j1.filename, j2.filename)
+            diffs = unpack_misc_data(diffs, j1.options)
             export_html_report(report_file, add_short_ref_for_report(diffs, options), options,
                                status, calculate_pcts(diffs, j1, j2))
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
     if options.output:
-        file_write(options.output, diffs,
+        json_dump(options.output, diffs,
                    error_msg=f"Failed to export diff results to {options.output}.",
                    success_msg=f"Diff results written to {options.output}.")
     else:
         logger.warning("No output file specified. No reports generated.")
 
-def unpack_misc_data(diffs: Dict, f1, f2) -> Dict:
+
+def unpack_misc_data(diffs: Dict, options: "Options") -> Dict:
     if misc_data := diffs["common_summary"].get("misc_data"):
         diffs["common_summary"] |= {**misc_data}
         del diffs["common_summary"]["misc_data"]
-    if misc_data := diffs["diff_summary"].get(f1, {}).get("misc_data"):
-        diffs["diff_summary"][f1] |= {**misc_data}
-        del diffs["diff_summary"][f1]["misc_data"]
-    if misc_data := diffs["diff_summary"].get(f2, {}).get("misc_data"):
-        diffs["diff_summary"][f2] |= {**misc_data}
-        del diffs["diff_summary"][f2]["misc_data"]
-    return diffs
+    if misc_data := diffs["diff_summary"].get(options.file_1, {}).get("misc_data"):
+        diffs["diff_summary"][options.file_1] |= {**misc_data}
+        del diffs["diff_summary"][options.file_1]["misc_data"]
+    if misc_data := diffs["diff_summary"].get(options.file_2, {}).get("misc_data"):
+        diffs["diff_summary"][options.file_2] |= {**misc_data}
+        del diffs["diff_summary"][options.file_2]["misc_data"]
+    return sort_dict_lists(diffs, options.sort_keys)
 
 
 def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:
