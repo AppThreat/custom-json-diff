@@ -156,6 +156,17 @@ def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
     return next((i for i in sort_keys if i in data), False)
 
 
+def get_sort_key_list(data: List[Dict], sort_keys: List):
+    sort_keys = sort_keys
+    if not (key := get_sort_key(data[0], list(sort_keys))):
+        return False
+    key_list = [(i.keys()) for i in data]
+    if all(key in i for i in key_list):
+        return key
+    sort_keys.pop(sort_keys.index(key))
+    return get_sort_key_list(data, list(sort_keys))
+
+
 def import_config(config: str) -> Dict:
     file_data = file_read(config, False, f"Unable to locate {config}.")
     try:
@@ -216,56 +227,53 @@ def manual_version_compare(v1: str, v2: str, comparator: str) -> bool:
     return True
 
 
-def render_csaf_template(diffs, jinja_tmpl, options, status):
-    return jinja_tmpl.render(
-        common_document=json.dumps(diffs["common_summary"]["document"], indent=2),
-        common_product_tree=json.dumps(diffs["common_summary"]["product_tree"], indent=2),
-        common_vulnerabilities=diffs["common_summary"]["vulnerabilities"],
-        diff_document_1=json.dumps(diffs["diff_summary"][options.file_1]["document"], indent=2),
-        diff_document_2=json.dumps(diffs["diff_summary"][options.file_2]["document"], indent=2),
-        diff_product_tree_1=json.dumps(diffs["diff_summary"][options.file_1]["product_tree"],
-                                       indent=2),
-        diff_product_tree_2=json.dumps(diffs["diff_summary"][options.file_2]["product_tree"],
-                                       indent=2),
-        diff_vulnerabilities_1=diffs["diff_summary"][options.file_1]["vulnerabilities"],
-        diff_vulnerabilities_2=diffs["diff_summary"][options.file_2]["vulnerabilities"],
-        diff_status=status, csaf_1=options.file_1, csaf_2=options.file_2, )
-
-
 def render_bom_template(diffs, jinja_tmpl, options, stats_summary, status):
     return jinja_tmpl.render(
-        common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
-        common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
-        common_services=diffs["common_summary"].get("services", []),
-        common_deps=diffs["common_summary"].get("dependencies", []),
-        common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
-        common_other=diffs["common_summary"].get("components", {}).get("other_components", []),
-        common_vdrs=diffs["common_summary"].get("vulnerabilities", []),
-        diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
-            "libraries", []),
-        diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
-            "libraries", []),
-        diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
-            "frameworks", []),
-        diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
-            "frameworks", []),
-        diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
-            "applications", []),
-        diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
-            "applications", []),
-        diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
-            "other_components", []),
-        diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
-            "other_components", []),
-        diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
-        diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
-        diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
-        diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
-        diff_vdrs_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
-        diff_vdrs_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
-        bom_1=options.file_1, bom_2=options.file_2, stats=stats_summary, metadata=bool(
-            diffs["diff_summary"][options.file_1].get("misc_data", {}) or diffs["diff_summary"][
-                options.file_2].get("misc_data", {})), diff_status=status, )
+            common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
+            common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
+            common_services=diffs["common_summary"].get("services", []),
+            common_deps=diffs["common_summary"].get("dependencies", []),
+            common_apps=diffs["common_summary"].get("components", {}).get("applications", []),
+            common_other=diffs["common_summary"].get("components", {}).get("other_components", []),
+            common_vdrs=diffs["common_summary"].get("vulnerabilities", []),
+            diff_lib_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("libraries", []),
+            diff_lib_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("libraries", []),
+            diff_frameworks_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("frameworks", []),
+            diff_frameworks_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("frameworks", []),
+            diff_apps_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("applications", []),
+            diff_apps_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("applications", []),
+            diff_other_1=diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get("other_components", []),
+            diff_other_2=diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get("other_components", []),
+            diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
+            diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
+            diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
+            diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
+            diff_vdrs_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
+            diff_vdrs_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
+            bom_1=options.file_1,
+            bom_2=options.file_2,
+            stats=stats_summary, metadata=bool(
+            diffs["diff_summary"].get(options.file_1, {}).get("misc_data", {}) or diffs[
+                "diff_summary"].get(options.file_2, {}).get("misc_data", {})),
+            diff_status=status,
+        )
+
+
+def render_csaf_template(diffs, jinja_tmpl, options, status):
+    return jinja_tmpl.render(
+            common_document=diffs["common_summary"].get("document", {}),
+            common_product_tree=diffs["common_summary"].get("product_tree", {}),
+            common_vulnerabilities=diffs["common_summary"].get("vulnerabilities", []),
+            diff_document_1=diffs["diff_summary"].get(options.file_1, {}).get("document", {}),
+            diff_document_2=diffs["diff_summary"].get(options.file_2, {}).get("document", {}),
+            diff_product_tree_1=diffs["diff_summary"].get(options.file_1, {}).get("product_tree", {}),
+            diff_product_tree_2=diffs["diff_summary"].get(options.file_2, {}).get("product_tree", {}),
+            diff_vulnerabilities_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
+            diff_vulnerabilities_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
+            diff_status=status,
+            csaf_1=options.file_1,
+            csaf_2=options.file_2,
+        )
 
 
 def sort_dict(result: Dict, sort_keys: List[str]) -> Dict:
@@ -303,7 +311,7 @@ def sort_helper(v: Any, sort_keys: List) -> Any:
 def sort_list(lst: List, sort_keys: List[str]) -> List:
     """Sorts a list"""
     if isinstance(lst[0], dict):
-        if sort_key := get_sort_key(lst[0], sort_keys):
+        if sort_key := get_sort_key_list(lst, sort_keys):
             lst = sorted((lst), key=lambda x: x[sort_key])
         for i in lst:
             for k, v in i.items():
