@@ -558,6 +558,32 @@ class CsafDicts:
         return {self.filename: self.to_dict()}
 
 
+class CsafScore:
+    def __init__(self, data: Dict, options: "Options"):
+        self.cvss_v3 = data.get("cvss_v3", {})
+        self.products = data.get("products", [])
+        self.options = options
+
+    def __eq__(self, other):
+        if not self.options.allow_new_data:
+            self.cvss_v3 == other.cvss_v3 and all(
+                i in other.products for i in self.products) and all(
+                i in self.products for i in other.products)
+        a, b = order_documents(self, other)
+        if a.cvss_v3 and a.cvss_v3 != b.cvss_v3:
+            return False
+        return all(i in b.products for i in a.products)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def to_dict(self):
+        return filter_empty(self.options.include_empty, {
+            "cvss_v3": self.cvss_v3,
+            "products": self.products
+        })
+
+
 class CsafVulnerability:
     def __init__(self, data: Dict, options: "Options"):
         self.acknowledgements = data.get("acknowledgements", [])
@@ -569,7 +595,7 @@ class CsafVulnerability:
         self.options = options
         self.product_status = data.get("product_status", {})
         self.references = data.get("references", [])
-        self.scores = data.get("scores", [])
+        self.scores = [CsafScore(i, options) for i in data.get("scores", [])]
         self.title = data.get("title", "")
 
     def __eq__(self, other):
@@ -609,7 +635,7 @@ class CsafVulnerability:
             "notes": self.notes,
             "product_status": self.product_status,
             "references": self.references,
-            "scores": self.scores,
+            "scores": [i.to_dict() for i in self.scores],
             "title": self.title
         })
 
@@ -822,7 +848,7 @@ def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, Li
     components: List = []
     if not original_data:
         return FlatDicts(other_data), components, services, dependencies, vulnerabilities
-    components = [BomComponent(i, options) for i in original_data.get("components", [])]
+    components.extend(BomComponent(i, options) for i in original_data.get("components", []))
     services.extend(BomService(i, options) for i in original_data.get("services", []))
     dependencies.extend(BomDependency(i, options) for i in original_data.get("dependencies", []))
     vulnerabilities.extend(BomVdr(data=i, options=options) for i in original_data.get("vulnerabilities", []))
