@@ -11,7 +11,7 @@ from custom_json_diff.lib.custom_diff_classes import (
     BomDicts, CsafDicts, FlatDicts, Options, order_documents
 )
 from custom_json_diff.lib.utils import (
-    export_html_report, export_results, logger, sort_dict_lists
+    export_html_report, json_dump, json_load, logger, sort_dict_lists
 )
 
 if TYPE_CHECKING:
@@ -63,8 +63,8 @@ def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
 
 def compare_dicts(options: "Options") -> Tuple[int, "BomDicts|CsafDicts|FlatDicts", "BomDicts|CsafDicts|FlatDicts"]:
     options2 = deepcopy(options)
-    json_1_data = load_json(options.file_1, options)
-    json_2_data = load_json(options.file_2, options2)
+    json_1_data = json_to_class(options.file_1, options)
+    json_2_data = json_to_class(options.file_2, options2)
     if json_1_data == json_2_data:
         return 0, json_1_data, json_2_data
     return 1, json_1_data, json_2_data
@@ -183,21 +183,11 @@ def get_status(diff: Dict) -> int:
     return status
 
 
-def handle_results(outfile: str, diffs: Dict) -> None:
-    if outfile:
-        export_results(outfile, diffs)
-
-
-def load_json(json_file: str, options: "Options") -> "BomDicts|CsafDicts|FlatDicts":
-    try:
-        with open(json_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            data = json.loads(json.dumps(data, sort_keys=True))
-    except FileNotFoundError:
-        logger.error("File not found: %s", json_file)
-        sys.exit(1)
-    except json.JSONDecodeError:
-        logger.error("Invalid JSON: %s", json_file)
+def json_to_class(json_file: str, options: "Options") -> "BomDicts|CsafDicts|FlatDicts":
+    data = json.loads(json.dumps(json_load(json_file), sort_keys=True))
+    if not data:
+        logger.error("No data in JSON: %s.", json_file)
+        logger.error("Rerun with --debug for more information.")
         sys.exit(1)
     if options.preconfig_type == "bom":
         data = sort_dict_lists(data, options.sort_keys)
@@ -238,15 +228,17 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
     else:
         logger.info("Differences found.")
     if options.output:
-        export_results(options.output, diffs)
+        json_dump(options.output, diffs,
+                   error_msg=f"Failed to export diff results to {options.output}.",
+                   success_msg=f"Diff results written to {options.output}.")
     else:
-        logger.warning("No output file specified. No reports generated.")
+        logger.debug("No output file specified. No reports generated.")
         return
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
-            export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
-                           calculate_pcts(diffs, j1, j2))
+            export_html_report(report_file, add_short_ref_for_report(diffs, options), options,
+                               status, calculate_pcts(diffs, j1, j2))
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
 
@@ -268,10 +260,10 @@ def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, com
 def summarize_bom_diffs(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> Tuple[int, Dict]:
     commons_2, bom_2 = get_second_bom_diff(bom_1, bom_2, commons)
     common_refs = commons_2.get_refs()
-    diff_summary_1 = generate_bom_diff(bom_1, commons, common_refs)
-    diff_summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
-    status = int(get_status(diff_summary_1) or get_status(diff_summary_2))
-    return status, {bom_1.filename: diff_summary_1, bom_2.filename: diff_summary_2}
+    summary_1 = generate_bom_diff(bom_1, commons, common_refs)
+    summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
+    status = int(get_status(summary_1) or get_status(summary_2))
+    return status, {bom_1.filename: summary_1, bom_2.filename: summary_2}
 
 
 def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[int, Dict]:

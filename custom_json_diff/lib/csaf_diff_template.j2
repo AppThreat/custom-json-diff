@@ -32,7 +32,7 @@
             <tr>
                 <th colspan="3"
                     style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
-                    Diff
+                    Diff Elements
                 </th>
             </tr>
             <tr>
@@ -97,7 +97,7 @@
                                             </details>
                                         </li>
                                     {% endif %}
-                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                    {% if key in ["ids", "notes", "references", "acknowledgements"] and value|length > 0 %}
                                         <li>
                                             <details>
                                                 <summary>{{ key }}:</summary>
@@ -171,7 +171,7 @@
                                             </details>
                                         </li>
                                     {% endif %}
-                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                    {% if key in ["ids", "notes", "references", "acknowledgements"] and value|length > 0 %}
                                         <li>
                                             <details>
                                                 <summary>{{ key }}:</summary>
@@ -283,7 +283,7 @@
                                             </details>
                                         </li>
                                     {% endif %}
-                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                    {% if key in ["ids", "notes", "references", "acknowledgements"] and value|length > 0 %}
                                         <li>
                                             <details>
                                                 <summary>{{ key }}:</summary>

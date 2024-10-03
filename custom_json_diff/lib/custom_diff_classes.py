@@ -33,11 +33,11 @@ class Options:  # type: ignore
     doc_num: int = 1
 
     def __post_init__(self):
-        if self.testing:
-            self.exclude, self.comp_keys, self.svc_keys, self.do_advanced = get_cdxgen_excludes(
-                self.include, self.allow_new_versions, self.allow_new_data)
-            self.sort_keys = ["url", "content", "ref", "name", "value", "location"]
-        elif self.config:
+        # if self.testing:
+        #     self.exclude, self.comp_keys, self.svc_keys, self.do_advanced = get_cdxgen_excludes(
+        #         self.include, self.allow_new_versions, self.allow_new_data)
+        #     self.sort_keys = ["url", "content", "ref", "name", "value", "location"]
+        if self.config:
             toml_data = import_config(self.config)
             self.preconfig_type = toml_data.get("preset_settings", {}).get("type", "")
             self.allow_new_versions = toml_data.get("preset_settings", {}).get(
@@ -61,6 +61,7 @@ class Options:  # type: ignore
         self.include = list(set(self.include))
         self.comp_keys = list(set(self.comp_keys))
         self.svc_keys = list(set(self.svc_keys))
+        self.sort_keys = list(set(self.sort_keys))
 
 
 class FlatDicts:

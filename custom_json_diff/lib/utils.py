@@ -4,7 +4,7 @@ import os
 import re
 import sys
 from datetime import date, datetime
-from typing import Dict, List, TYPE_CHECKING
+from typing import Any, Dict, List, LiteralString, TYPE_CHECKING
 
 import packageurl
 import semver
@@ -98,6 +98,23 @@ def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
     return compare_generic(version_1, version_2, comparator)  #type: ignore
 
 
+def export_html_report(outfile: str, diffs: Dict, options: "Options", status: int,
+                       stats_summary: Dict | None = None) -> None:
+    if options.report_template:
+        template_file = options.report_template
+    else:
+        template_file = options.report_template or os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{options.preconfig_type}_diff_template.j2")
+    template = file_read(template_file)
+    jinja_env = Environment(autoescape=True)
+    jinja_tmpl = jinja_env.from_string(template)
+    if options.preconfig_type == "bom":
+        report_result = render_bom_template(diffs, jinja_tmpl, options, stats_summary, status)
+    else:
+        report_result = render_csaf_template(diffs, jinja_tmpl, options, status)
+    file_write(outfile, report_result, error_msg=f"Unable to generate HTML report at {outfile}.",
+               success_msg=f"HTML report generated: {outfile}")
+
+
 def file_read(filename: LiteralString | str | bytes, binary: bool = False, error_msg: str = "", log: logging.Logger = logger) -> str | bytes:
     try:
         if binary:
@@ -130,6 +147,23 @@ def file_write(filename: LiteralString | str | bytes, contents, error_msg: str =
 
 
 def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
+    return next((i for i in sort_keys if i in data), False)
+
+
+def import_config(config: str) -> Dict:
+    file_data = file_read(config, False, f"Unable to locate {config}.")
+    try:
+        toml_data = toml.loads(file_data)
+        if toml_data.get("preset_settings") and toml_data["preset_settings"].get("type", "") not in {
+            "bom", "csaf"}:
+            raise ValueError("Invalid preset type.")
+    except toml.TomlDecodeError:
+        logger.error("Invalid TOML.")
+        sys.exit(1)
+    except ValueError as e:
+        logger.error(e)
+        sys.exit(1)
+    return toml_data
 
 
 def json_load(json_file: str, error_msg: str = "", log: logging.Logger = logger) -> Dict:
