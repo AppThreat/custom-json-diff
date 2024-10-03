@@ -200,6 +200,18 @@ def import_config(config: str) -> Dict:
     return toml_data
 
 
+def sort_dict(result: Dict, sort_keys: List[str]) -> Dict:
+    """Sorts a dictionary"""
+    for k, v in result.items():
+        if isinstance(v, list) and len(v) >= 2:
+            result[k] = sort_list(v, sort_keys)
+        elif isinstance(v, dict):
+            result[k] = sort_dict_lists(v, sort_keys)
+        else:
+            result[k] = v
+    return result
+
+
 def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
     """Sorts a dictionary"""
     for k, v in result.items():
@@ -212,11 +224,22 @@ def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
     return result
 
 
+def sort_helper(v: Any, sort_keys: List) -> Any:
+    if isinstance(v, list) and len(v) >= 2:
+        v = sort_list(v, sort_keys)
+    elif isinstance(v, dict):
+        v = sort_dict_lists(v, sort_keys)
+    return v
+
+
 def sort_list(lst: List, sort_keys: List[str]) -> List:
     """Sorts a list"""
     if isinstance(lst[0], dict):
         if sort_key := get_sort_key(lst[0], sort_keys):
-            return sorted(lst, key=lambda x: x[sort_key])
+            lst = sorted((lst), key=lambda x: x[sort_key])
+        for i in lst:
+            for k, v in i.items():
+                i[k] = sort_helper(v, sort_keys)
         logger.debug("No key(s) specified for sorting. Cannot sort list of dictionaries.")
         return lst
     if isinstance(lst[0], (str, int)):
