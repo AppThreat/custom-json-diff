@@ -5,8 +5,8 @@ import pytest
 from custom_json_diff.lib.custom_diff import (
     compare_dicts, get_diff, json_to_class
 )
-from custom_json_diff.lib.utils import sort_dict_lists
 from custom_json_diff.lib.custom_diff_classes import Options
+from custom_json_diff.lib.utils import sort_dict_lists
 
 
 @pytest.fixture
@@ -54,16 +54,11 @@ def results():
         return json.load(f)
 
 
-def test_load_json(java_1_flat, java_2_flat):
+def test_json_to_class(java_1_flat, java_2_flat):
     flattened = java_1_flat.to_dict()
     assert "serialNumber" not in flattened
     assert "metadata.timestamp" not in flattened
     assert "metadata.tools.components.[].version" not in java_2_flat.to_dict()
-
-
-def test_sort_dict(java_1_flat, python_1_flat, java_2_flat, results):
-    x = {"a": 1, "b": 2, "c": [3, 2, 1], "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}]}
-    assert sort_dict_lists(x, ["url", "content", "ref", "name", "value"]) == {"a": 1, "b": 2, "c": [1, 2, 3], "d": [{"name": "test 2", "value": 2}, {"name": "test 3", "value": 1}]}
 
 
 def test_compare_dicts(results, options_2):
@@ -82,3 +77,15 @@ def test_flat_dicts_class(java_1_flat, python_1_flat, java_2_flat, python_2_flat
     assert (python_1_flat + python_2_flat).to_dict(True) == results["result_10"]
     python_1_flat -= python_2_flat
     assert python_1_flat.to_dict(True) == results["result_11"]
+
+
+def test_sort_dict():
+    x = {
+        "a": 1, "b": 2, "c": [3, 2, 1],
+        "d": [{"name": "test 3", "value": 1}, {"value": 3}, {"name": "test 2", "value": 2}]
+    }
+
+    assert sort_dict_lists(x, ["url", "content", "ref", "name", "value"]) == {
+        "a": 1, "b": 2, "c": [1, 2, 3],
+        "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}, {"value": 3}]
+    }
