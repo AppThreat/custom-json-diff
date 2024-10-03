@@ -693,14 +693,10 @@
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
                                                         {% for affect in value %}
-                                                            <details>
-                                                                <summary>{{ affect['ref'] }}:</summary>
-                                                                <ul>
-                                                                    {% for a in affect['versions'] %}
-                                                                        <li>{{ a }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </details>
+                                                            {% for a, b in affect|items %}
+                                                                <li>{{ a }}: {{ b }}</li>
+                                                            {% endfor %}
+                                                            <br>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
@@ -813,14 +809,10 @@
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
                                                         {% for affect in value %}
-                                                            <details>
-                                                                <summary>{{ affect['ref'] }}:</summary>
-                                                                <ul>
-                                                                    {% for a in affect['versions'] %}
-                                                                        <li>{{ a }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </details>
+                                                            {% for a, b in affect|items %}
+                                                                <li>{{ a }}: {{ b }}</li>
+                                                            {% endfor %}
+                                                            <br>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
@@ -1238,14 +1230,10 @@
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
                                                         {% for affect in value %}
-                                                            <details>
-                                                                <summary>{{ affect['ref'] }}:</summary>
-                                                                <ul>
-                                                                    {% for a in affect['versions'] %}
-                                                                        <li>{{ a }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </details>
+                                                            {% for a, b in affect|items %}
+                                                                <li>{{ a }}: {{ b }}</li>
+                                                            {% endfor %}
+                                                            <br>
                                                         {% endfor %}
                                                     </ul>
                                                 </details>

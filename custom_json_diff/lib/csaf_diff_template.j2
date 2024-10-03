@@ -45,14 +45,14 @@
                     <td colspan="3" style="text-align: center">No differences found.</td>
                 </tr>
             {% endif %}
-            {% if diff_document_1 != "{}" or diff_document_2 != "{}" %}
+            {% if diff_document_1 or diff_document_2 %}
                 <tr>
                     <th>document</th>
                     <td>{{ diff_document_1 }}</td>
                     <td>{{ diff_document_2 }}</td>
                 </tr>
             {% endif %}
-            {% if diff_product_tree_1 != "{}" or diff_product_tree_2 != "{}" %}
+            {% if diff_product_tree_1 or diff_product_tree_2 %}
                 <tr>
                     <th>product_tree</th>
                     <td>{{ diff_product_tree_1 }}</td>
@@ -228,18 +228,18 @@
                     Elements
                 </th>
             </tr>
-            {% if common_document == "{}" and common_product_tree == "{}" and common_vulnerabilities|length == 0 %}
+            {% if not common_document and not common_product_tree and common_vulnerabilities|length == 0 %}
                 <tr>
                     <td colspan="2" style="text-align: center">No commonalities.</td>
                 </tr>
             {% endif %}
-            {% if common_document != "{}" %}
+            {% if common_document %}
                 <tr>
                     <th style="width: 8%">document</th>
                     <td style="width: 41%">{{ common_document }}</td>
                 </tr>
             {% endif %}
-            {% if common_product_tree != "{}" %}
+            {% if common_product_tree %}
                 <tr>
                     <th style="width: 8%">product_tree</th>
                     <td style="width: 41%">{{ common_product_tree }}</td>
