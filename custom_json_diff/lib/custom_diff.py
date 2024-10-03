@@ -278,11 +278,9 @@ def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDict
     commons_2, csaf_2 = get_second_csaf_diff(csaf_1, csaf_2, commons)
     csaf_1 = csaf_1 - commons
     common_refs = commons_2.get_refs()
-    diff_summary_1 = csaf_1.to_summary()
-    diff_summary_2 = generate_csaf_diff(csaf_2, commons_2, common_refs)
-    status = int(any((
-        csaf_1.document, csaf_2.document, csaf_1.product_tree, csaf_2.product_tree,
-        csaf_1.vulnerabilities, csaf_2.vulnerabilities)))
-    # diff_summary_1 = csaf_1.to_summary()
-    # diff_summary_2 = csaf_2.to_summary()
-    return status, {**diff_summary_1, **diff_summary_2}
+    diff_summary = csaf_1.to_summary()
+    diff_summary |= generate_csaf_diff(csaf_2, commons_2, common_refs)
+    status = int(any((csaf_1.document.to_dict(True), csaf_2.document.to_dict(True),
+                      csaf_1.product_tree.to_dict(True), csaf_2.product_tree.to_dict(True),
+                      csaf_1.vulnerabilities, csaf_2.vulnerabilities)))
+    return status, diff_summary
