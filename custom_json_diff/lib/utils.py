@@ -193,7 +193,9 @@ def json_load(json_file: str, error_msg: str = "", log: logging.Logger = logger)
     return {}
 
 
-def json_dump(filename: str, data: Dict, compact: bool = False, error_msg: str = "", success_msg: str = "", log: logging.Logger = logger) -> None:
+def json_dump(filename: str, data: Dict, compact: bool = False, error_msg: str = "", success_msg: str = "", sort_keys: List|None = None, log: logging.Logger = logger) -> None:
+    if sort_keys:
+        data = sort_dict(data, sort_keys)
     try:
         if compact:
             formatted = json.dumps(data, separators=(',', ':'), sort_keys=True)
@@ -280,18 +282,6 @@ def render_csaf_template(diffs, jinja_tmpl, options, status):
 def sort_dict(result: Dict, sort_keys: List[str]) -> Dict:
     """Sorts a dictionary"""
     for k, v in result.items():
-        if isinstance(v, list) and len(v) >= 2:
-            result[k] = sort_list(v, sort_keys)
-        elif isinstance(v, dict):
-            result[k] = sort_dict_lists(v, sort_keys)
-        else:
-            result[k] = v
-    return result
-
-
-def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
-    """Sorts a dictionary"""
-    for k, v in result.items():
         if isinstance(v, dict):
             result[k] = sort_dict_lists(v, sort_keys)
         elif isinstance(v, list) and len(v) >= 2:
@@ -299,6 +289,11 @@ def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
         else:
             result[k] = v
     return result
+
+
+# Deprecated
+def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
+    return sort_dict(result, sort_keys)
 
 
 def sort_helper(v: Any, sort_keys: List) -> Any:
