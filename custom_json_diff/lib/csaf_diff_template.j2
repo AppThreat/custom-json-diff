@@ -9,11 +9,6 @@
             grid-template-columns: 5% 90% 5%;
         }
 
-        .table_summary2 {
-            display: grid;
-            grid-template-columns: 10% 25% 4% 51% 10%;
-        }
-
         th, td {
             border: 1px solid black;
             padding: 5px;
@@ -35,12 +30,14 @@
                     Diff Elements
                 </th>
             </tr>
-            <tr>
-                <th style="width: 8%"></th>
-                <th style="text-align: center; width: 46%">{{ csaf_1 }}</th>
-                <th style="text-align: center; width: 46%">{{ csaf_2 }}</th>
-            </tr>
-            {% if status == 0 %}
+            {% if diff_status > 0 %}
+                <tr>
+                    <th style="width: 8%"></th>
+                    <th style="text-align: center; width: 46%">{{ csaf_1 }}</th>
+                    <th style="text-align: center; width: 46%">{{ csaf_2 }}</th>
+                </tr>
+            {% endif %}
+            {% if diff_status == 0 %}
                 <tr>
                     <td colspan="3" style="text-align: center">No differences found.</td>
                 </tr>
@@ -118,14 +115,14 @@
                                                 <ul>
                                                     {% for k, v in value|items %}
                                                         {% if v|length > 0 %}
-                                                        <li>
-                                                            <details>
-                                                                <summary>{{ k }}:</summary>
-                                                                <ul>{% for a in v %}
-                                                                    <li>{{ a }}</li></ul>
-                                                                {% endfor %}
-                                                            </details>
-                                                        </li>
+                                                            <li>
+                                                                <details>
+                                                                    <summary>{{ k }}:</summary>
+                                                                    <ul>{% for a in v %}
+                                                                        <li>{{ a }}</li></ul>
+                                                                    {% endfor %}
+                                                                </details>
+                                                            </li>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </ul>
@@ -192,14 +189,14 @@
                                                 <ul>
                                                     {% for k, v in value|items %}
                                                         {% if v|length > 0 %}
-                                                        <li>
-                                                            <details>
-                                                                <summary>{{ k }}:</summary>
-                                                                <ul>{% for a in v %}
-                                                                    <li>{{ a }}</li></ul>
-                                                                {% endfor %}
-                                                            </details>
-                                                        </li>
+                                                            <li>
+                                                                <details>
+                                                                    <summary>{{ k }}:</summary>
+                                                                    <ul>{% for a in v %}
+                                                                        <li>{{ a }}</li></ul>
+                                                                    {% endfor %}
+                                                                </details>
+                                                            </li>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </ul>
@@ -246,7 +243,7 @@
                 </tr>
             {% endif %}
             {% if common_vulnerabilities|length > 0 %}
-               <tr>
+                <tr>
                     <th>vulnerabilities</th>
                     <td>{% for item in common_vulnerabilities %}
                         <details>
@@ -304,14 +301,14 @@
                                                 <ul>
                                                     {% for k, v in value|items %}
                                                         {% if v|length > 0 %}
-                                                        <li>
-                                                            <details>
-                                                                <summary>{{ k }}:</summary>
-                                                                <ul>{% for a in v %}
-                                                                    <li>{{ a }}</li></ul>
-                                                                {% endfor %}
-                                                            </details>
-                                                        </li>
+                                                            <li>
+                                                                <details>
+                                                                    <summary>{{ k }}:</summary>
+                                                                    <ul>{% for a in v %}
+                                                                        <li>{{ a }}</li></ul>
+                                                                    {% endfor %}
+                                                                </details>
+                                                            </li>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </ul>
@@ -322,7 +319,7 @@
                             </ul>
                         </details>
                     {% endfor %}</td>
-               </tr>
+                </tr>
             {% endif %}
         </table>
     </div>
