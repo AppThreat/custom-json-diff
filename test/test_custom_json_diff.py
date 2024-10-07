@@ -3,44 +3,49 @@ import json
 import pytest
 
 from custom_json_diff.lib.custom_diff import (
-    compare_dicts, get_diff, load_json
+    compare_dicts, get_bom_status, get_diff, json_to_class
 )
-from custom_json_diff.lib.utils import sort_dict_lists
 from custom_json_diff.lib.custom_diff_classes import Options
+from custom_json_diff.lib.utils import sort_dict_lists
 
 
 @pytest.fixture
 def java_1_flat():
-    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-java.json", options)
+    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-java.json", options)
 
 
 @pytest.fixture
 def java_2_flat():
-    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-java2.json", options)
+    options = Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-java2.json", options)
 
 
 @pytest.fixture
 def python_1_flat():
-    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-python.json", options)
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-python.json", options)
 
 
 @pytest.fixture
 def python_2_flat():
-    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", testing=True, include=["licenses", "hashes"])
-    return load_json("test/sbom-python2.json", options)
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-python2.json", options)
+
+@pytest.fixture
+def python_3_flat():
+    options = Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
+    return json_to_class("test/sbom-python2.json", options)
 
 
 @pytest.fixture
 def options_1():
-    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", testing=True, include=["licenses", "hashes"])
+    return Options(file_1="test/sbom-java.json", file_2="test/sbom-java2.json", include=["licenses", "hashes"], exclude=["serialNumber", "metadata.timestamp"])
 
 
 @pytest.fixture
 def options_2():
-    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", testing=True)
+    return Options(file_1="test/sbom-python.json", file_2="test/sbom-python2.json", exclude=["serialNumber", "metadata.timestamp"])
 
 
 @pytest.fixture
@@ -49,16 +54,11 @@ def results():
         return json.load(f)
 
 
-def test_load_json(java_1_flat, java_2_flat):
-    java_1_flat = java_1_flat.to_dict()
-    assert "serialNumber" not in java_1_flat
-    assert "metadata.timestamp" not in java_1_flat
+def test_json_to_class(java_1_flat, java_2_flat):
+    flattened = java_1_flat.to_dict()
+    assert "serialNumber" not in flattened
+    assert "metadata.timestamp" not in flattened
     assert "metadata.tools.components.[].version" not in java_2_flat.to_dict()
-
-
-def test_sort_dict(java_1_flat, python_1_flat, java_2_flat, results):
-    x = {"a": 1, "b": 2, "c": [3, 2, 1], "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}]}
-    assert sort_dict_lists(x, ["url", "content", "ref", "name", "value"]) == {"a": 1, "b": 2, "c": [1, 2, 3], "d": [{"name": "test 2", "value": 2}, {"name": "test 3", "value": 1}]}
 
 
 def test_compare_dicts(results, options_2):
@@ -77,3 +77,29 @@ def test_flat_dicts_class(java_1_flat, python_1_flat, java_2_flat, python_2_flat
     assert (python_1_flat + python_2_flat).to_dict(True) == results["result_10"]
     python_1_flat -= python_2_flat
     assert python_1_flat.to_dict(True) == results["result_11"]
+
+
+def test_sort_dict():
+    x = {
+        "a": 1, "b": 2, "c": [3, 2, 1],
+        "d": [{"name": "test 3", "value": 1}, {"value": 3}, {"name": "test 2", "value": 2}]
+    }
+
+    assert sort_dict_lists(x, ["url", "content", "ref", "name", "value"]) == {
+        "a": 1, "b": 2, "c": [1, 2, 3],
+        "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}, {"value": 3}]
+    }
+
+
+def test_get_bom_status():
+    diff_summary_1 = {}
+    diff_summary_2 = {}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
+    diff_summary_1 = {"components": {}}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
+    diff_summary_1 = {"components": {"applications": []}}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
+    diff_summary_1 = {"misc_data": {"key": "value"}}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 2
+    diff_summary_1["services"] = [{"name": "test"}]
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 3

@@ -11,7 +11,7 @@ from custom_json_diff.lib.custom_diff_classes import (
     BomDicts, CsafDicts, FlatDicts, Options, order_documents
 )
 from custom_json_diff.lib.utils import (
-    export_html_report, export_results, logger, sort_dict_lists
+    export_html_report, filter_empty, json_dump, json_load, sort_dict, sort_dict_lists
 )
 
 if TYPE_CHECKING:
@@ -21,16 +21,19 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+purl_regex = re.compile(r"[^/]+/[^/]+@[^?\s]+")
 
 
 def add_short_ref_for_report(diffs: Dict, options: "Options") -> Dict:
-    purl_regex = re.compile(r"[^/]+/[^/]+@[^?\s]+")
     diffs["diff_summary"][options.file_1]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_1].get("dependencies", []), purl_regex)
     diffs["diff_summary"][options.file_2]["dependencies"] = parse_purls(
         diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
         diffs["common_summary"].get("dependencies", []), purl_regex)
+    diffs["diff_summary"][options.file_1] = filter_empty(options.include_empty, diffs["diff_summary"][options.file_1])
+    diffs["diff_summary"][options.file_2] = filter_empty(options.include_empty, diffs["diff_summary"][options.file_2])
+    diffs["common_summary"] = filter_empty(options.include_empty, diffs["common_summary"])
     return diffs
 
 
@@ -63,8 +66,8 @@ def check_regex(regex_keys: Set[re.Pattern], key: str) -> bool:
 
 def compare_dicts(options: "Options") -> Tuple[int, "BomDicts|CsafDicts|FlatDicts", "BomDicts|CsafDicts|FlatDicts"]:
     options2 = deepcopy(options)
-    json_1_data = load_json(options.file_1, options)
-    json_2_data = load_json(options.file_2, options2)
+    json_1_data = json_to_class(options.file_1, options)
+    json_2_data = json_to_class(options.file_2, options2)
     if json_1_data == json_2_data:
         return 0, json_1_data, json_2_data
     return 1, json_1_data, json_2_data
@@ -104,17 +107,21 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
                     diff_summary["components"]["libraries"].append(i.to_dict())  #type: ignore
                 case _:
                     diff_summary["components"]["other_components"].append(i.to_dict())  #type: ignore
-    diff_summary["misc_data"] = (bom.other_data - commons.other_data).to_dict()
-    return diff_summary
+    diff_summary["misc_data"] = (bom.misc_data - commons.misc_data).to_dict()
+    diff_summary["components"] = filter_empty(bom.options.include_empty, diff_summary["components"])  #type: ignore
+    return filter_empty(commons.options.include_empty, diff_summary)
 
 
 def generate_csaf_diff(csaf: CsafDicts, commons: CsafDicts, common_refs: Dict[str, Set]) -> Dict:
     return {
-        csaf.filename: {
+        csaf.filename: filter_empty(commons.options.include_empty, {
         "document": (csaf.document - commons.document).to_dict(),
         "product_tree": (csaf.product_tree - commons.product_tree).to_dict(),
-        "vulnerabilities": [i.to_dict() for i in csaf.vulnerabilities if i.title not in common_refs["vulnerabilities"]]
-        }
+        "vulnerabilities": [
+            i.to_dict() for i in csaf.vulnerabilities
+            if i.title not in common_refs["vulnerabilities"]
+        ]
+        })
     }
 
 
@@ -150,7 +157,7 @@ def get_second_bom_diff(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> 
         elif res == 2:
             vdrs.append(i)
     return commons, BomDicts(bom_2.options, bom_2.filename, {},
-                             other_data=bom_2.other_data - bom_1.other_data, components=components,
+                             other_data=bom_2.misc_data - bom_1.misc_data, components=components,
                              services=services, dependencies=dependencies, vulnerabilities=vdrs)
 
 
@@ -167,7 +174,7 @@ def get_second_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDict
                               vulnerabilities=vulnerabilities)
 
 
-def get_status(diff: Dict) -> int:
+def get_bom_status(diff: Dict) -> int:
     prelim_status = any((
         len(diff.get("components", {}).get("applications", [])) > 0,
         len(diff.get("components", {}).get("frameworks", [])) > 0,
@@ -178,26 +185,23 @@ def get_status(diff: Dict) -> int:
         len(diff.get("vulnerabilities", [])) > 0
     ))
     status = 3 if prelim_status else 0
-    if status == 0 and diff.get("metadata"):
+    if status == 0 and diff.get("misc_data"):
         status = 2
     return status
 
 
-def handle_results(outfile: str, diffs: Dict) -> None:
-    if outfile:
-        export_results(outfile, diffs)
+def get_csaf_status(diff: Dict) -> int:
+    for key, value in diff.items():
+        if value:
+            return 3
+    return 0
 
 
-def load_json(json_file: str, options: "Options") -> "BomDicts|CsafDicts|FlatDicts":
-    try:
-        with open(json_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            data = json.loads(json.dumps(data, sort_keys=True))
-    except FileNotFoundError:
-        logger.error("File not found: %s", json_file)
-        sys.exit(1)
-    except json.JSONDecodeError:
-        logger.error("Invalid JSON: %s", json_file)
+def json_to_class(json_file: str, options: "Options") -> "BomDicts|CsafDicts|FlatDicts":
+    data = json.loads(json.dumps(json_load(json_file), sort_keys=True))
+    if not data:
+        logger.error("No data in JSON: %s.", json_file)
+        logger.error("Rerun with --debug for more information.")
         sys.exit(1)
     if options.preconfig_type == "bom":
         data = sort_dict_lists(data, options.sort_keys)
@@ -221,7 +225,8 @@ def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Tuple[int, Dict]:
     common_bom = b1.intersection(b2, "common_summary")
     output = common_bom.to_summary()
     status, diffs = summarize_bom_diffs(b1, b2, common_bom)
-    return status, {"diff_summary": diffs, **output}
+    output |= {"diff_summary": diffs}
+    return status, output
 
 
 def perform_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts) -> Tuple[int, Dict]:
@@ -229,7 +234,8 @@ def perform_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts) -> Tuple[int, Dict]:
     common_csaf = c1.intersection(c2, "common_summary")
     output = common_csaf.to_summary()
     status, diffs = summarize_csaf_diffs(c1, c2, common_csaf)
-    return status, {"diff_summary": diffs, **output}
+    output |= {"diff_summary": diffs}
+    return status, output
 
 
 def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2: BomDicts) -> None:
@@ -237,18 +243,33 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
         logger.info("No differences found.")
     else:
         logger.info("Differences found.")
-    if options.output:
-        export_results(options.output, diffs)
-    else:
-        logger.warning("No output file specified. No reports generated.")
-        return
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
             export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
                            calculate_pcts(diffs, j1, j2))
+            diffs = unpack_misc_data(diffs, j1.options)
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
+    if options.output:
+        json_dump(options.output, diffs,
+                   error_msg=f"Failed to export diff results to {options.output}.",
+                   success_msg=f"Diff results written to {options.output}.")
+    else:
+        logger.warning("No output file specified. No reports generated.")
+
+
+def unpack_misc_data(diffs: Dict, options: "Options") -> Dict:
+    if misc_data := diffs["common_summary"].get("misc_data"):
+        diffs["common_summary"] |= {**misc_data}
+        del diffs["common_summary"]["misc_data"]
+    if misc_data := diffs["diff_summary"].get(options.file_1, {}).get("misc_data"):
+        diffs["diff_summary"][options.file_1] |= {**misc_data}
+        del diffs["diff_summary"][options.file_1]["misc_data"]
+    if misc_data := diffs["diff_summary"].get(options.file_2, {}).get("misc_data"):
+        diffs["diff_summary"][options.file_2] |= {**misc_data}
+        del diffs["diff_summary"][options.file_2]["misc_data"]
+    return sort_dict(diffs, options.sort_keys)
 
 
 def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:
@@ -268,21 +289,17 @@ def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, com
 def summarize_bom_diffs(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> Tuple[int, Dict]:
     commons_2, bom_2 = get_second_bom_diff(bom_1, bom_2, commons)
     common_refs = commons_2.get_refs()
-    diff_summary_1 = generate_bom_diff(bom_1, commons, common_refs)
-    diff_summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
-    status = int(get_status(diff_summary_1) or get_status(diff_summary_2))
-    return status, {bom_1.filename: diff_summary_1, bom_2.filename: diff_summary_2}
+    summary_1 = generate_bom_diff(bom_1, commons, common_refs)
+    summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
+    status = max(get_bom_status(summary_1), get_bom_status(summary_2))
+    return status, {bom_1.filename: summary_1, bom_2.filename: summary_2}
 
 
 def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[int, Dict]:
+    commons, csaf_1 = get_second_csaf_diff(csaf_2, csaf_1, commons)
     commons_2, csaf_2 = get_second_csaf_diff(csaf_1, csaf_2, commons)
-    csaf_1 = csaf_1 - commons
     common_refs = commons_2.get_refs()
-    diff_summary_1 = csaf_1.to_summary()
-    diff_summary_2 = generate_csaf_diff(csaf_2, commons_2, common_refs)
-    status = int(any((
-        csaf_1.document, csaf_2.document, csaf_1.product_tree, csaf_2.product_tree,
-        csaf_1.vulnerabilities, csaf_2.vulnerabilities)))
-    # diff_summary_1 = csaf_1.to_summary()
-    # diff_summary_2 = csaf_2.to_summary()
-    return status, {**diff_summary_1, **diff_summary_2}
+    diff_summary = generate_csaf_diff(csaf_1, commons, common_refs)
+    diff_summary |= generate_csaf_diff(csaf_2, commons_2, common_refs)
+    status = max(get_csaf_status(diff_summary[csaf_1.filename]), get_csaf_status(diff_summary[csaf_2.filename]))
+    return status, diff_summary

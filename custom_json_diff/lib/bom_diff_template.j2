@@ -28,7 +28,7 @@
 <div class="table_summary2">
     <div></div>
     <div>
-        <table style="width: 100%;">
+        <table style="width: 100%">
             <tr>
                 <th colspan="2"
                     style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
@@ -43,14 +43,13 @@
                 </tr>
             {% endfor %}
             <tr>
-                <td>Metadata matched:</td>
-                {% if metadata %}
+                <td>Other matched:</td>
+                {% if misc_data_1 or misc_data_2 %}
                     <td style="text-align: right">✖</td>
                 {% endif %}
-                {% if not metadata %}
+                {% if not (misc_data_1 or misc_data_2) %}
                     <td style="text-align: right">✔</td>
                 {% endif %}
-
             </tr>
         </table>
     </div>
@@ -87,27 +86,28 @@
             <tr>
                 <th colspan="3"
                     style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
-                    Component
-                    Diff
+                    Element Diff
                 </th>
             </tr>
-            <tr>
-                <th style="width: 8%"></th>
-                <th style="text-align: center; width: 46%">{{ bom_1 }}</th>
-                <th style="text-align: center; width: 46%">{{ bom_2 }}</th>
-            </tr>
-            {% if diff_status <= 2 %}
+            {% if diff_status > 0 %}
+                <tr>
+                    <th style="width: 8%"></th>
+                    <th style="text-align: center; width: 46%">{{ bom_1 }}</th>
+                    <th style="text-align: center; width: 46%">{{ bom_2 }}</th>
+                </tr>
+            {% endif %}
+            {% if diff_status == 0 %}
                 <tr>
                     <td colspan="3" style="text-align: center">No differences found.</td>
                 </tr>
             {% endif %}
             {% if diff_apps_1 or diff_apps_2 %}
                 <tr>
-                    <th>applications<br><br>{{ diff_apps_1 | length }}
-                        vs {{ diff_apps_2 | length }}</th>
+                    <th>applications<br><br>{{ diff_apps_1|length }} vs {{ diff_apps_2|length }}
+                    </th>
                     <td>{% for item in diff_apps_1 %}
                         <details>
-                            <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
+                            <summary>{{ item["name"] }}@{{ item["version"] }}</summary>
                             <ul>
                                 {% for key, value in item|items %}
                                     {% if value != "" and key not in ["properties","evidence","hashes","licenses","externalReferences"] %}
@@ -154,7 +154,8 @@
                                 {% endfor %}
                             </ul>
                         </details>
-                    {% endfor %}</td>
+                    {% endfor %}
+                    </td>
                     <td>{% for item in diff_apps_2 %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
@@ -693,14 +694,9 @@
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
                                                         {% for affect in value %}
-                                                            <details>
-                                                                <summary>{{ affect['ref'] }}:</summary>
-                                                                <ul>
-                                                                    {% for a in affect['versions'] %}
-                                                                        <li>{{ a }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </details>
+                                                            {% for a, b in affect|items %}
+                                                                <li>{{ a }}: {{ b }}</li>
+                                                            {% endfor %}
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
@@ -813,14 +809,9 @@
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
                                                         {% for affect in value %}
-                                                            <details>
-                                                                <summary>{{ affect['ref'] }}:</summary>
-                                                                <ul>
-                                                                    {% for a in affect['versions'] %}
-                                                                        <li>{{ a }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </details>
+                                                            {% for a, b in affect|items %}
+                                                                <li>{{ a }}: {{ b }}</li>
+                                                            {% endfor %}
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
@@ -870,6 +861,23 @@
                     {% endfor %}</td>
                 </tr>
             {% endif %}
+            {% if misc_data_1 or misc_data_2 %}
+                <tr>
+                    <th>other</th>
+                    {% if misc_data_1 %}
+                        <td>{{ misc_data_1 }}</td>
+                    {% endif %}
+                    {% if not misc_data_1 %}
+                        <td></td>
+                    {% endif %}
+                    {% if misc_data_1 %}
+                        <td>{{ misc_data_2 }}</td>
+                    {% endif %}
+                    {% if not misc_data_2 %}
+                        <td></td>
+                    {% endif %}
+                </tr>
+            {% endif %}
         </table>
     </div>
     <div></div>
@@ -883,10 +891,10 @@
                 <th colspan="2"
                     style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
                     Common
-                    Components
+                    Elements
                 </th>
             </tr>
-            {% if not (common_apps or common_frameworks or common_lib or common_other or common_services or common_deps or common_vdrs) %}
+            {% if not (common_apps or common_frameworks or common_lib or common_other or common_services or common_deps or common_vdrs or common_misc_data) %}
                 <tr>
                     <td colspan="2" style="text-align: center">No commonalities.</td>
                 </tr>
@@ -1068,11 +1076,10 @@
                     {% endfor %}</td>
                 </tr>
             {% endif %}
-
             {% if common_other %}
                 <tr>
                     <th>other types</th>
-                    <td>{% for item in common_other %}
+                    <td style="width: 41%">{% for item in common_other %}
                         <details>
                             <summary>{{ item['name'] }}@{{ item['version'] }}</summary>
                             <ul>
@@ -1173,7 +1180,7 @@
             {% if common_vdrs %}
                 <tr>
                     <th style="width: 8%">vulnerabilities</th>
-                    <td>{% for item in common_vdrs %}
+                    <td style="width: 41%">{% for item in common_vdrs %}
                         <details>
                             <summary>{{ item['bom-ref'] }}</summary>
                             <ul>
@@ -1238,14 +1245,9 @@
                                                     <summary>{{ key }}:</summary>
                                                     <ul>
                                                         {% for affect in value %}
-                                                            <details>
-                                                                <summary>{{ affect['ref'] }}:</summary>
-                                                                <ul>
-                                                                    {% for a in affect['versions'] %}
-                                                                        <li>{{ a }}</li>
-                                                                    {% endfor %}
-                                                                </ul>
-                                                            </details>
+                                                            {% for a, b in affect|items %}
+                                                                <li>{{ a }}: {{ b }}</li>
+                                                            {% endfor %}
                                                         {% endfor %}
                                                     </ul>
                                                 </details>
@@ -1293,6 +1295,12 @@
                             </ul>
                         </details>
                     {% endfor %}</td>
+                </tr>
+            {% endif %}
+            {% if common_misc_data %}
+                <tr>
+                    <th style="width: 8%">other</th>
+                    <td style="width: 41%">{{ common_misc_data }}</td>
                 </tr>
             {% endif %}
         </table>

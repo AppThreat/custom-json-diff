@@ -9,11 +9,6 @@
             grid-template-columns: 5% 90% 5%;
         }
 
-        .table_summary2 {
-            display: grid;
-            grid-template-columns: 10% 25% 4% 51% 10%;
-        }
-
         th, td {
             border: 1px solid black;
             padding: 5px;
@@ -32,27 +27,29 @@
             <tr>
                 <th colspan="3"
                     style="text-align: center; background-color: #d7ddde; border: 1px solid black;">
-                    Diff
+                    Diff Elements
                 </th>
             </tr>
-            <tr>
-                <th style="width: 8%"></th>
-                <th style="text-align: center; width: 46%">{{ csaf_1 }}</th>
-                <th style="text-align: center; width: 46%">{{ csaf_2 }}</th>
-            </tr>
-            {% if status == 0 %}
+            {% if diff_status > 0 %}
+                <tr>
+                    <th style="width: 8%"></th>
+                    <th style="text-align: center; width: 46%">{{ csaf_1 }}</th>
+                    <th style="text-align: center; width: 46%">{{ csaf_2 }}</th>
+                </tr>
+            {% endif %}
+            {% if diff_status == 0 %}
                 <tr>
                     <td colspan="3" style="text-align: center">No differences found.</td>
                 </tr>
             {% endif %}
-            {% if diff_document_1 != "{}" or diff_document_2 != "{}" %}
+            {% if diff_document_1 or diff_document_2 %}
                 <tr>
                     <th>document</th>
                     <td>{{ diff_document_1 }}</td>
                     <td>{{ diff_document_2 }}</td>
                 </tr>
             {% endif %}
-            {% if diff_product_tree_1 != "{}" or diff_product_tree_2 != "{}" %}
+            {% if diff_product_tree_1 or diff_product_tree_2 %}
                 <tr>
                     <th>product_tree</th>
                     <td>{{ diff_product_tree_1 }}</td>
@@ -97,7 +94,7 @@
                                             </details>
                                         </li>
                                     {% endif %}
-                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                    {% if key in ["ids", "notes", "references", "acknowledgements"] and value|length > 0 %}
                                         <li>
                                             <details>
                                                 <summary>{{ key }}:</summary>
@@ -118,14 +115,14 @@
                                                 <ul>
                                                     {% for k, v in value|items %}
                                                         {% if v|length > 0 %}
-                                                        <li>
-                                                            <details>
-                                                                <summary>{{ k }}:</summary>
-                                                                <ul>{% for a in v %}
-                                                                    <li>{{ a }}</li></ul>
-                                                                {% endfor %}
-                                                            </details>
-                                                        </li>
+                                                            <li>
+                                                                <details>
+                                                                    <summary>{{ k }}:</summary>
+                                                                    <ul>{% for a in v %}
+                                                                        <li>{{ a }}</li></ul>
+                                                                    {% endfor %}
+                                                                </details>
+                                                            </li>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </ul>
@@ -171,7 +168,7 @@
                                             </details>
                                         </li>
                                     {% endif %}
-                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                    {% if key in ["ids", "notes", "references", "acknowledgements"] and value|length > 0 %}
                                         <li>
                                             <details>
                                                 <summary>{{ key }}:</summary>
@@ -192,14 +189,14 @@
                                                 <ul>
                                                     {% for k, v in value|items %}
                                                         {% if v|length > 0 %}
-                                                        <li>
-                                                            <details>
-                                                                <summary>{{ k }}:</summary>
-                                                                <ul>{% for a in v %}
-                                                                    <li>{{ a }}</li></ul>
-                                                                {% endfor %}
-                                                            </details>
-                                                        </li>
+                                                            <li>
+                                                                <details>
+                                                                    <summary>{{ k }}:</summary>
+                                                                    <ul>{% for a in v %}
+                                                                        <li>{{ a }}</li></ul>
+                                                                    {% endfor %}
+                                                                </details>
+                                                            </li>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </ul>
@@ -228,25 +225,25 @@
                     Elements
                 </th>
             </tr>
-            {% if common_document == "{}" and common_product_tree == "{}" and common_vulnerabilities|length == 0 %}
+            {% if not common_document and not common_product_tree and common_vulnerabilities|length == 0 %}
                 <tr>
                     <td colspan="2" style="text-align: center">No commonalities.</td>
                 </tr>
             {% endif %}
-            {% if common_document != "{}" %}
+            {% if common_document %}
                 <tr>
                     <th style="width: 8%">document</th>
                     <td style="width: 41%">{{ common_document }}</td>
                 </tr>
             {% endif %}
-            {% if common_product_tree != "{}" %}
+            {% if common_product_tree %}
                 <tr>
                     <th style="width: 8%">product_tree</th>
                     <td style="width: 41%">{{ common_product_tree }}</td>
                 </tr>
             {% endif %}
             {% if common_vulnerabilities|length > 0 %}
-               <tr>
+                <tr>
                     <th>vulnerabilities</th>
                     <td>{% for item in common_vulnerabilities %}
                         <details>
@@ -283,7 +280,7 @@
                                             </details>
                                         </li>
                                     {% endif %}
-                                    {% if key in ["ids", "notes", "references"] and value|length > 0 %}
+                                    {% if key in ["ids", "notes", "references", "acknowledgements"] and value|length > 0 %}
                                         <li>
                                             <details>
                                                 <summary>{{ key }}:</summary>
@@ -304,14 +301,14 @@
                                                 <ul>
                                                     {% for k, v in value|items %}
                                                         {% if v|length > 0 %}
-                                                        <li>
-                                                            <details>
-                                                                <summary>{{ k }}:</summary>
-                                                                <ul>{% for a in v %}
-                                                                    <li>{{ a }}</li></ul>
-                                                                {% endfor %}
-                                                            </details>
-                                                        </li>
+                                                            <li>
+                                                                <details>
+                                                                    <summary>{{ k }}:</summary>
+                                                                    <ul>{% for a in v %}
+                                                                        <li>{{ a }}</li></ul>
+                                                                    {% endfor %}
+                                                                </details>
+                                                            </li>
                                                         {% endif %}
                                                     {% endfor %}
                                                 </ul>
@@ -322,7 +319,7 @@
                             </ul>
                         </details>
                     {% endfor %}</td>
-               </tr>
+                </tr>
             {% endif %}
         </table>
     </div>
