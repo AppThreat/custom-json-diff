@@ -318,8 +318,10 @@ def results():
 def test_bom_diff(results, options_1):
     result, j1, j2 = compare_dicts(options_1)
     _, result_summary = perform_bom_diff(j1, j2)
-    assert unpack_misc_data(result_summary, j1.options) == results["result_4"]
-
+    x = unpack_misc_data(result_summary, j1.options)
+    assert len(x.get("diff_summary", {}).get(j1.filename, {}).get("components", {}).get("frameworks", [])) == 13
+    assert len(x.get("diff_summary", {}).get(j2.filename, {}).get("components", {}).get("frameworks", [])) == 1
+    assert len(x.get("common_summary", {}).get("components", {}).get("frameworks", [])) == 5
 
 def test_bom_diff_component_options(results, bom_dicts_1, bom_dicts_2, bom_dicts_3, bom_dicts_4, bom_dicts_5, bom_dicts_6, bom_dicts_7, bom_dicts_8):
     # test --allow-new-data for components

@@ -3,7 +3,7 @@ import json
 import pytest
 
 from custom_json_diff.lib.custom_diff import (
-    compare_dicts, get_diff, json_to_class
+    compare_dicts, get_bom_status, get_diff, json_to_class
 )
 from custom_json_diff.lib.custom_diff_classes import Options
 from custom_json_diff.lib.utils import sort_dict_lists
@@ -89,3 +89,17 @@ def test_sort_dict():
         "a": 1, "b": 2, "c": [1, 2, 3],
         "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}, {"value": 3}]
     }
+
+
+def test_get_bom_status():
+    diff_summary_1 = {}
+    diff_summary_2 = {}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
+    diff_summary_1 = {"components": {}}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
+    diff_summary_1 = {"components": {"applications": []}}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
+    diff_summary_1 = {"misc_data": {"key": "value"}}
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 2
+    diff_summary_1["services"] = [{"name": "test"}]
+    assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 3
