@@ -174,7 +174,7 @@ def get_second_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDict
                               vulnerabilities=vulnerabilities)
 
 
-def get_status(diff: Dict) -> int:
+def get_bom_status(diff: Dict) -> int:
     prelim_status = any((
         len(diff.get("components", {}).get("applications", [])) > 0,
         len(diff.get("components", {}).get("frameworks", [])) > 0,
@@ -185,9 +185,16 @@ def get_status(diff: Dict) -> int:
         len(diff.get("vulnerabilities", [])) > 0
     ))
     status = 3 if prelim_status else 0
-    if status == 0 and diff.get("metadata"):
+    if status == 0 and diff.get("misc_data"):
         status = 2
     return status
+
+
+def get_csaf_status(diff: Dict) -> int:
+    for key, value in diff.items():
+        if value:
+            return 3
+    return 0
 
 
 def json_to_class(json_file: str, options: "Options") -> "BomDicts|CsafDicts|FlatDicts":
@@ -262,7 +269,7 @@ def unpack_misc_data(diffs: Dict, options: "Options") -> Dict:
     if misc_data := diffs["diff_summary"].get(options.file_2, {}).get("misc_data"):
         diffs["diff_summary"][options.file_2] |= {**misc_data}
         del diffs["diff_summary"][options.file_2]["misc_data"]
-    return sort_dict_lists(diffs, options.sort_keys)
+    return sort_dict(diffs, options.sort_keys)
 
 
 def summarize_diff_counts(result: Dict, diff_counts: Dict, bom_counts: Dict, common_counts: Dict) -> Dict:
@@ -284,17 +291,15 @@ def summarize_bom_diffs(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> 
     common_refs = commons_2.get_refs()
     summary_1 = generate_bom_diff(bom_1, commons, common_refs)
     summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
-    status = int(get_status(summary_1) or get_status(summary_2))
+    status = max(get_bom_status(summary_1), get_bom_status(summary_2))
     return status, {bom_1.filename: summary_1, bom_2.filename: summary_2}
 
 
 def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[int, Dict]:
+    commons, csaf_1 = get_second_csaf_diff(csaf_2, csaf_1, commons)
     commons_2, csaf_2 = get_second_csaf_diff(csaf_1, csaf_2, commons)
-    csaf_1 = csaf_1 - commons
     common_refs = commons_2.get_refs()
-    diff_summary = csaf_1.to_summary()
+    diff_summary = generate_csaf_diff(csaf_1, commons, common_refs)
     diff_summary |= generate_csaf_diff(csaf_2, commons_2, common_refs)
-    status = int(any((csaf_1.document.to_dict(True), csaf_2.document.to_dict(True),
-                      csaf_1.product_tree.to_dict(True), csaf_2.product_tree.to_dict(True),
-                      csaf_1.vulnerabilities, csaf_2.vulnerabilities)))
+    status = max(get_csaf_status(diff_summary[csaf_1.filename]), get_csaf_status(diff_summary[csaf_2.filename]))
     return status, diff_summary
