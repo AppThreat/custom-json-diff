@@ -4,7 +4,7 @@ import os
 import re
 import sys
 from datetime import date, datetime
-from typing import Any, Dict, List, LiteralString, TYPE_CHECKING
+from typing import Any, Dict, List, TYPE_CHECKING
 
 import packageurl
 import semver
@@ -106,7 +106,7 @@ def export_html_report(outfile: str, diffs: Dict, options: "Options", status: in
         template_file = options.report_template or os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{options.preconfig_type}_diff_template.j2")
     template = file_read(template_file)
     jinja_env = Environment(autoescape=True)
-    jinja_tmpl = jinja_env.from_string(template)
+    jinja_tmpl = jinja_env.from_string(str(template))
     if options.preconfig_type == "bom":
         report_result = render_bom_template(diffs, jinja_tmpl, options, stats_summary, status)
     else:
@@ -115,7 +115,7 @@ def export_html_report(outfile: str, diffs: Dict, options: "Options", status: in
                success_msg=f"HTML report generated: {outfile}")
 
 
-def file_read(filename: LiteralString | str | bytes, binary: bool = False, error_msg: str = "", log: logging.Logger = logger) -> str | bytes:
+def file_read(filename: str | bytes, binary: bool = False, error_msg: str = "", log: logging.Logger = logger) -> str | bytes:
     try:
         if binary:
             with open(filename, "rb") as f:
@@ -130,7 +130,7 @@ def file_read(filename: LiteralString | str | bytes, binary: bool = False, error
     return ""
 
 
-def file_write(filename: LiteralString | str | bytes, contents, error_msg: str = "", success_msg: str = "", log: logging.Logger = logger) -> None:
+def file_write(filename: str | bytes, contents, error_msg: str = "", success_msg: str = "", log: logging.Logger = logger) -> None:
     try:
         with open(filename, "w", encoding="utf-8") as f:
             f.write(contents)
@@ -170,7 +170,7 @@ def get_sort_key_list(data: List[Dict], sort_keys: List):
 def import_config(config: str) -> Dict:
     file_data = file_read(config, False, f"Unable to locate {config}.")
     try:
-        toml_data = toml.loads(file_data)
+        toml_data = toml.loads(str(file_data))
         if toml_data.get("preset_settings") and toml_data["preset_settings"].get("type", "") not in {
             "bom", "csaf"}:
             raise ValueError("Invalid preset type.")

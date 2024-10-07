@@ -2,7 +2,7 @@ import logging
 import re
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from json_flatten import unflatten  # type: ignore
 
@@ -230,9 +230,9 @@ class BomDependency:
         self.ref = dep.get("ref", "")
         self._deps = Array(dep.get("dependsOn", []))
         # deprecated
-        self.original_data = {}
+        self.original_data: Dict = {}
         self.ref_no_version, self._deps_no_version = import_bom_dependency(
-            dep, options.allow_new_versions) if options.allow_new_versions else "", []
+            dep, options.allow_new_versions) if options.allow_new_versions else "", Array([])
         self.options = options
 
     def __eq__(self, other):
@@ -465,7 +465,7 @@ class BomService:
 
 class BomVdr:
     """Class for holding bom vulnerability data"""
-    def __init__(self, data: Dict = None, options: "Options" = Options(), **kwargs):
+    def __init__(self, data: Optional[Dict] = None, options: "Options" = Options(), **kwargs):
         if not data:
             data = {}
         self.options = options

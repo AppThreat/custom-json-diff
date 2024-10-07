@@ -108,7 +108,7 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
                 case _:
                     diff_summary["components"]["other_components"].append(i.to_dict())  #type: ignore
     diff_summary["misc_data"] = (bom.misc_data - commons.misc_data).to_dict()
-    diff_summary["components"] = filter_empty(bom.options.include_empty, diff_summary["components"])
+    diff_summary["components"] = filter_empty(bom.options.include_empty, diff_summary["components"])  #type: ignore
     return filter_empty(commons.options.include_empty, diff_summary)
 
 
