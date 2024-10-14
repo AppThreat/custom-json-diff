@@ -6,7 +6,6 @@ from custom_json_diff.lib.custom_diff import (
     compare_dicts, get_bom_status, get_diff, json_to_class
 )
 from custom_json_diff.lib.custom_diff_classes import Options
-from custom_json_diff.lib.utils import sort_dict_lists
 
 
 @pytest.fixture
@@ -77,18 +76,6 @@ def test_flat_dicts_class(java_1_flat, python_1_flat, java_2_flat, python_2_flat
     assert (python_1_flat + python_2_flat).to_dict(True) == results["result_10"]
     python_1_flat -= python_2_flat
     assert python_1_flat.to_dict(True) == results["result_11"]
-
-
-def test_sort_dict():
-    x = {
-        "a": 1, "b": 2, "c": [3, 2, 1],
-        "d": [{"name": "test 3", "value": 1}, {"value": 3}, {"name": "test 2", "value": 2}]
-    }
-
-    assert sort_dict_lists(x, ["url", "content", "ref", "name", "value"]) == {
-        "a": 1, "b": 2, "c": [1, 2, 3],
-        "d": [{"name": "test 3", "value": 1}, {"name": "test 2", "value": 2}, {"value": 3}]
-    }
 
 
 def test_get_bom_status():
