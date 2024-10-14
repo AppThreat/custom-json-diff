@@ -3,7 +3,14 @@ from copy import deepcopy
 
 import pytest
 
-from custom_json_diff.lib.custom_diff import compare_dicts, perform_bom_diff, unpack_misc_data
+from custom_json_diff.lib.custom_diff import (
+    add_short_ref_for_report,
+    calculate_pcts,
+    compare_dicts,
+    generate_counts,
+    perform_bom_diff,
+    unpack_misc_data
+)
 from custom_json_diff.lib.custom_diff_classes import (
     BomComponent, BomDependency, BomDicts, FlatDicts, Options, BomVdr, BomVdrAffects
 )
@@ -318,10 +325,32 @@ def results():
 def test_bom_diff(results, options_1):
     result, j1, j2 = compare_dicts(options_1)
     _, result_summary = perform_bom_diff(j1, j2)
-    x = unpack_misc_data(result_summary, j1.options)
-    assert len(x.get("diff_summary", {}).get(j1.filename, {}).get("components", {}).get("frameworks", [])) == 13
-    assert len(x.get("diff_summary", {}).get(j2.filename, {}).get("components", {}).get("frameworks", [])) == 1
-    assert len(x.get("common_summary", {}).get("components", {}).get("frameworks", [])) == 5
+    result_summary = unpack_misc_data(result_summary, j1.options)
+    assert len(result_summary.get("diff_summary", {}).get(j1.filename, {}).get("components", {}).get("frameworks", [])) == 13
+    assert len(result_summary.get("diff_summary", {}).get(j2.filename, {}).get("components", {}).get("frameworks", [])) == 1
+    assert len(result_summary.get("common_summary", {}).get("components", {}).get("frameworks", [])) == 5
+    assert calculate_pcts(result_summary, j1, j2) == {
+        'breakdown': {'dependencies': ['13/17 (76.47%)', '1/5 (20.0%)'],
+                      'frameworks': ['13/18 (72.22%)', '1/6 (16.67%)'],
+                      'libraries': ['11/13 (84.62%)', '1/3 (33.33%)'],
+                      'services': ['8/14 (57.14%)', '0/6 (0.0%)']},
+        'common_summary': [['Common libraries matched: ', '2 (25.0)%'],
+                           ['Common frameworks matched: ', '5 (41.67)%'],
+                           ['Common services matched: ', '6 (60.0)%'],
+                           ['Common dependencies matched: ', '4 (36.36)%']]
+    }
+    assert generate_counts(result_summary.get("common_summary", {})) == {'applications': 0,
+        'dependencies': 4, 'frameworks': 5, 'libraries': 2, 'other_components': 0, 'services': 6,
+        'vulnerabilities': 0}
+    assert generate_counts(result_summary.get("diff_summary", {}).get(j1.filename, {})) == {
+        'applications': 0, 'dependencies': 13, 'frameworks': 13, 'libraries': 11,
+        'other_components': 0, 'services': 8, 'vulnerabilities': 0}
+    assert add_short_ref_for_report(result_summary, j1.options).get("diff_summary", {}).get(
+        j2.filename, {}).get("dependencies") == [
+               {'ref': 'pkg:maven/javax.activation/activation@1.1?type=jar',
+                'short_ref': 'javax.activation/activation@1.1'}]
+
+
 
 def test_bom_diff_component_options(results, bom_dicts_1, bom_dicts_2, bom_dicts_3, bom_dicts_4, bom_dicts_5, bom_dicts_6, bom_dicts_7, bom_dicts_8):
     # test --allow-new-data for components
@@ -642,3 +671,16 @@ def test_bom_dependencies(options_3):
     bom_1 = BomDependency({"dependsOn": ["pkg:npm/depd@1.1.2"], "ref": "pkg:npm/http-errors@1.6.1"},options_3)
     bom_1.options.allow_new_versions = True
     assert bom_1 == bom_2
+
+
+def test_unpack_misc_data(options_1):
+    data = {
+        "common_summary": {"misc_data": {"foo": "bar"}},
+        "diff_summary": {
+            options_1.file_1: {"misc_data": {"foo": "bar"}},
+            options_1.file_2: {"misc_data": {"foo": "bar"}}}
+    }
+    assert unpack_misc_data(data, options_1) == {
+        'common_summary': {'foo': 'bar'},
+        'diff_summary': {'test/sbom-java.json': {'foo': 'bar'},
+                  'test/sbom-java2.json': {'foo': 'bar'}}}
