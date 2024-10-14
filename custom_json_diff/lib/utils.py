@@ -145,10 +145,30 @@ def file_write(filename: str | bytes, contents, error_msg: str = "", success_msg
             log.debug("File written: %s", filename)
 
 
+def recursive_remove_empty(d: Dict) -> Dict:
+    filtered = {}
+    for k, v in d.items():
+        if not v:
+            continue
+        if isinstance(v, dict):
+            filtered[k] = recursive_remove_empty(v)
+        elif isinstance(v, list):
+            flist = []
+            for i in v:
+                if isinstance(i, dict):
+                    if tmp := recursive_remove_empty(i):
+                        flist.append(tmp)
+                elif i:
+                    flist.append(i)
+            if flist:
+                filtered[k] = flist
+        else:
+            filtered[k] = v
+    return filtered
+
+
 def filter_empty(include_empty: bool, d: Dict) -> Dict:
-    if not include_empty:
-        return {k: v for k, v in d.items() if v}
-    return d
+    return d if include_empty else recursive_remove_empty(d)
 
 
 def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:

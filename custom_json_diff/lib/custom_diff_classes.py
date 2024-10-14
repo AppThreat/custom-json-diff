@@ -222,13 +222,13 @@ class BomComponent:
         self._properties = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "author": self.author, "bom-ref": self.bom_ref, "type": self.component_type,
             "description": self.description, "evidence": self.evidence,
-            "externalReferences": self._external_references, "group": self.group,
-            "hashes": self._hashes, "licenses": self._licenses, "name": self.name,
-            "properties": self._properties, "publisher": self.publisher, "purl": self.purl,
-            "scope": self.scope, "version": self.version})
+            "externalReferences": self.external_references, "group": self.group,
+            "hashes": self.hashes, "licenses": self.licenses, "name": self.name,
+            "properties": self.properties, "publisher": self.publisher, "purl": self.purl,
+            "scope": self.scope, "version": self.version}
 
 
 class BomDependency:
@@ -411,8 +411,8 @@ class BomDicts:
         }
 
     def to_dict(self) -> Dict:
-        result = {
-            "components": filter_empty(self.options.include_empty, {
+        return {
+            "components": {
             "libraries": [i.to_dict() for i in self.components if
                           i.component_type == "library"],
             "frameworks": [i.to_dict() for i in self.components if
@@ -420,7 +420,7 @@ class BomDicts:
             "applications": [i.to_dict() for i in self.components if
                              i.component_type == "application"],
             "other_components": [i.to_dict() for i in self.components if
-                                 i.component_type not in ("library", "framework", "application")]}),
+                                 i.component_type not in ("library", "framework", "application")]},
             "dependencies": [i.to_dict() for i in self.dependencies],
             "services": [i.to_dict() for i in self.services],
             "vulnerabilities": [i.to_dict() for i in self.vdrs],
@@ -457,12 +457,12 @@ class BomService:
         self._endpoints = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "name": self.name,
             "endpoints": self._endpoints,
             "authenticated": self.authenticated,
             "x-trust-boundary": self.x_trust_boundary
-        })
+        }
 
 
 class BomVdr:
@@ -576,7 +576,7 @@ class BomVdr:
         self.options = options
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "id": self.id,
             "bom-ref": self.bom_ref,
             "advisories": self._advisories,
@@ -592,7 +592,7 @@ class BomVdr:
             "references": self._references,
             "source": self.source,
             "updated": self.updated,
-        })
+        }
 
 
 class BomVdrAffects:
@@ -628,7 +628,7 @@ class BomVdrAffects:
         self._versions = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {"ref": self.ref, "versions": self._versions})
+        return {"ref": self.ref, "versions": self.versions}
 
 
 class CsafDicts:
@@ -692,11 +692,11 @@ class CsafDicts:
         )
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "document": self.document.to_dict(unflat=True) if self.document else {},
             "product_tree": self.product_tree.to_dict(unflat=True) if self.product_tree else {},
             "vulnerabilities": [i.to_dict() for i in self.vulnerabilities] if self.vulnerabilities else []
-        })
+        }
 
     def to_summary(self) -> Dict:
         return {self.filename: self.to_dict()}
@@ -728,10 +728,10 @@ class CsafScore:
         self._products = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "cvss_v3": self.cvss_v3,
             "products": self._products
-        })
+        }
 
 
 class CsafVulnerability:
@@ -829,7 +829,7 @@ class CsafVulnerability:
         self.__init__(data={}, options=options)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "acknowledgements": self._acknowledgements,
             "cve": self.cve,
             "cwe": self.cwe,
@@ -840,7 +840,7 @@ class CsafVulnerability:
             "references": self._references,
             "scores": [i.to_dict() for i in self.scores],
             "title": self.title
-        })
+        }
 
 
 def advanced_eq_lists(lst_1: List, lst_2: List) -> bool:
