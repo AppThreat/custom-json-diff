@@ -76,6 +76,22 @@ class Options:  # type: ignore
         self.sort_keys = list(set(self.sort_keys))
 
 
+class OptionedClass:
+    def __init__(self, options: Options):
+        self._options = options
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, value):
+        self._options = self._update_options(value)
+
+    def _update_options(self, options):
+        self._options = options
+
+
 class FlatDicts:
 
     def __init__(self, elements: Dict | List):
@@ -141,8 +157,9 @@ class FlatElement:
         return {self.key: self.value}
 
 
-class BomComponent:
+class BomComponent(OptionedClass):
     def __init__(self, comp: Dict, options: Options):
+        super().__init__(options)
         self.author = comp.get("author", "")
         self.bom_ref = comp.get("bom-ref", "")
         self.component_type = comp.get("type", "")
@@ -231,15 +248,14 @@ class BomComponent:
             "scope": self.scope, "version": self.version}
 
 
-class BomDependency:
+class BomDependency(OptionedClass):
     def __init__(self, dep: Dict, options: "Options"):
-        self.ref = dep.get("ref", "")
+        super().__init__(options)
         self._ref = dep.get("ref", "")
         self._deps = Array(dep.get("dependsOn", []))
         self.original_data: Dict = {} # deprecated
         self._ref_no_version, self._deps_no_version = import_bom_dependency(
             dep, options.allow_new_versions) if options.allow_new_versions else "", Array([])
-        self.options = options
 
     def __eq__(self, other):
         if not self.options.allow_new_data and not self.options.allow_new_versions:
@@ -281,23 +297,20 @@ class BomDependency:
         return {"ref": self.ref, "dependsOn": self.deps}
 
 
-class BomDicts:
+class BomDicts(OptionedClass):
     def __init__(self, options: "Options", filename: str, original_data: Dict, other_data: FlatDicts | None = None,
                  components: List | None = None, services: List | None = None,
                  dependencies: List | None = None, vulnerabilities: List | None = None):
-        self.options = options
+        super().__init__(options)
         self.options.doc_num = 1 if filename == options.file_1 else 2
         self.misc_data, self._components, self._services, self._dependencies, self._vdrs = import_bom_dict(
-            self.options, original_data, other_data, components, services, dependencies, vulnerabilities)
+            options, original_data, other_data, components, services, dependencies, vulnerabilities)
         self.filename = filename
 
     def __eq__(self, other):
         return (self.misc_data == other.misc_data and self.components == other.components and
                 self.services == other.services and self.dependencies == other.dependencies and
                 self.vdrs == self.vdrs)
-
-    def __ne__(self, other):
-        return not self == other
 
     def __sub__(self, other):
         other_data = self.misc_data - other.misc_data
@@ -341,14 +354,6 @@ class BomDicts:
         _, self._components, _, _, _ = import_bom_dict(self.options, {}, components=value)
 
     @property
-    def services(self):
-        return self._services
-
-    @services.setter
-    def services(self, value):
-        _, _, self._services, _, _ = import_bom_dict(self.options, {}, services=value)
-
-    @property
     def dependencies(self):
         return self._dependencies
 
@@ -356,6 +361,16 @@ class BomDicts:
     def dependencies(self, value):
         _, _, _, self._dependencies, _ = import_bom_dict(self.options, {}, dependencies=value)
 
+    def _update_options(self, value):
+        self._options = value
+        for i in self._components:
+            i.options = value
+        for i in self._services:
+            i.options = value
+        for i in self._dependencies:
+            i.options = value
+        for i in self._vdrs:
+            i.options = value
 
     @property
     def services(self):
@@ -442,27 +457,23 @@ class BomDicts:
             "vulnerabilities": [i.to_dict() for i in self.vdrs],
             "misc_data": self.misc_data.to_dict(unflat=True)
         }
-        return filter_empty(self.options.include_empty, result)
 
     def to_summary(self) -> Dict:
         return {self.filename: self.to_dict()}
 
 
-class BomService:
+class BomService(OptionedClass):
     def __init__(self, svc: Dict, options: "Options"):
+        super().__init__(options)
         self.search_key = create_comp_key(svc, options.svc_keys)
         self.original_data = svc  # deprecated
         self.name = svc.get("name", "")
         self._endpoints = Array(svc.get("endpoints", []))
         self.authenticated = svc.get("authenticated", "")
         self.x_trust_boundary = svc.get("x-trust-boundary", "")
-        self.options = options
 
     def __eq__(self, other):
         return self.search_key == other.search_key and self.endpoints == other.endpoints
-
-    def __ne__(self, other):
-        return not self == other
 
     @property
     def endpoints(self):
@@ -481,12 +492,12 @@ class BomService:
         }
 
 
-class BomVdr:
+class BomVdr(OptionedClass):
     """Class for holding bom vulnerability data"""
     def __init__(self, data: Optional[Dict] = None, options: "Options" = Options(), **kwargs):
+        super().__init__(options)
         if not data:
             data = {}
-        self.options = options
         self.id = kwargs.get("id") or (data.get("id") or "")
         self.bom_ref = kwargs.get("bom_ref") or (data.get("bom-ref") or "")
         self._advisories = Array(kwargs.get("advisories") or (data.get("advisories") or []))
@@ -514,9 +525,6 @@ class BomVdr:
             # eq_allow_new_data_vdr checks for allow_new_versions as well
             return eq_allow_new_data_vdr(b1, b2)
         return self._field_eq(other) and compare_vdr_new_versions(b1, b2)
-
-    def __ne__(self, other):
-        return not self == other
 
     def _field_eq(self, other):
         """Compare fields that aren't affected by allow_new_versions
@@ -588,8 +596,12 @@ class BomVdr:
 
     def clear(self):
         options = self.options
-        self.__init__()
-        self.options = options
+        self.__init__(options=options)
+
+    def _update_options(self, value):
+        self._options = value
+        for i in self._affects:
+            i.options = value
 
     def to_dict(self):
         return {
@@ -611,10 +623,9 @@ class BomVdr:
         }
 
 
-class BomVdrAffects:
+class BomVdrAffects(OptionedClass):
     def __init__(self, data: Dict, options: "Options"):
-        self.data = data
-        self.options = options
+        super().__init__(options)
         self.data = data  # deprecated
         self.ref = data.get("ref", "")
         self._versions = Array(data.get("versions", []))
@@ -632,9 +643,6 @@ class BomVdrAffects:
             return compare_bom_refs(a1.ref, a2.ref, "<=") and advanced_eq_lists(a1.versions, a2.versions)
         return False
 
-    def __ne__(self, other):
-        return not self == other
-
     @property
     def versions(self):
         return self._versions
@@ -647,13 +655,13 @@ class BomVdrAffects:
         return {"ref": self.ref, "versions": self.versions}
 
 
-class CsafDicts:
+class CsafDicts(OptionedClass):
     def __init__(self, options: "Options", filename: str, original_data: Dict | None = None,
                  document: FlatDicts | None = None, product_tree: FlatDicts | None = None,
                  vulnerabilities: List | None = None):
+        super().__init__(options)
         self.document, self.product_tree, self._vulnerabilities = import_csaf(
             options, original_data, document, product_tree, vulnerabilities)
-        self.options = options
         self.options.doc_num = 1 if filename == options.file_1 else 2
         self.filename = filename
 
@@ -663,9 +671,6 @@ class CsafDicts:
             self.product_tree == other.product_tree,
             self.vulnerabilities == other.vulnerabilities
         ))
-
-    def __ne__(self, other):
-        return not self == other
 
     def __sub__(self, other):
         document = self.document - other.document
@@ -691,6 +696,11 @@ class CsafDicts:
         if value and not isinstance(value[0], CsafVulnerability):
             value = [CsafVulnerability(i, self.options) for i in value]
         self._vulnerabilities = Array(value)
+
+    def _update_options(self, options):
+        self._options = options
+        for i in self._vulnerabilities:
+            i.options = options
 
     def get_refs(self):
         return {"vulnerabilities": {i.title for i in self.vulnerabilities}}
@@ -720,11 +730,11 @@ class CsafDicts:
         return {self.filename: self.to_dict()}
 
 
-class CsafScore:
+class CsafScore(OptionedClass):
     def __init__(self, data: Dict, options: "Options"):
+        super().__init__(options)
         self.cvss_v3 = data.get("cvss_v3", {})
         self._products = Array(data.get("products", []))
-        self.options = options
 
     def __eq__(self, other):
         if not self.options.allow_new_data:
@@ -733,9 +743,6 @@ class CsafScore:
         if a.cvss_v3 and a.cvss_v3 != b.cvss_v3:
             return False
         return all(i in b.products for i in a.products)
-
-    def __ne__(self, other):
-        return not self == other
 
     @property
     def products(self):
@@ -752,15 +759,15 @@ class CsafScore:
         }
 
 
-class CsafVulnerability:
+class CsafVulnerability(OptionedClass):
     def __init__(self, data: Dict, options: "Options", **kwargs):
+        super().__init__(options)
         self._acknowledgements = Array(data.get("acknowledgements") or kwargs.get("acknowledgements", []))
         self.cve = data.get("cve") or kwargs.get("cve", "")
         self.cwe = data.get("cwe") or kwargs.get("cwe", "")
         self.discovery_date = data.get("discovery_date") or kwargs.get("discovery_date", "")
         self._ids = Array(data.get("ids") or kwargs.get("ids", []))
         self._notes = Array(data.get("notes") or kwargs.get("notes", []))
-        self.options = options
         self.product_status = data.get("product_status") or kwargs.get("product_status", {})
         self._references = Array(data.get("references") or kwargs.get("references", []))
         self._scores = Array([CsafScore(i, options) for i in (data.get("scores") or kwargs.get("scores", []))])
@@ -797,8 +804,10 @@ class CsafVulnerability:
             for attr, compare in attributes_to_compare
         )
 
-    def __ne__(self, other):
-        return not self == other
+    def _update_options(self, value):
+        self._options = value
+        for i in self._scores:
+            i.options = value
 
     @property
     def acknowledgements(self):
