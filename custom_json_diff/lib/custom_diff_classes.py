@@ -198,20 +198,20 @@ class BomComponent:
         self._external_references = Array(value)
 
     @property
-    def licenses(self):
-        return self._licenses
-
-    @licenses.setter
-    def licenses(self, value):
-        self._licenses = Array(value)
-
-    @property
     def hashes(self):
         return self._hashes
 
     @hashes.setter
     def hashes(self, value):
         self._hashes = Array(value)
+
+    @property
+    def licenses(self):
+        return self._licenses
+
+    @licenses.setter
+    def licenses(self, value):
+        self._licenses = Array(value)
 
     @property
     def properties(self):
@@ -234,6 +234,7 @@ class BomComponent:
 class BomDependency:
     def __init__(self, dep: Dict, options: "Options"):
         self.ref = dep.get("ref", "")
+        self._ref = dep.get("ref", "")
         self._deps = Array(dep.get("dependsOn", []))
         self.original_data: Dict = {} # deprecated
         self._ref_no_version, self._deps_no_version = import_bom_dependency(
@@ -257,21 +258,27 @@ class BomDependency:
     @deps.setter
     def deps(self, value):
         self._deps = Array(value)
+        if self.options.allow_new_versions:
+            self._ref_no_version, self._deps_no_version = import_bom_dependency(
+                {"ref": self.ref, "dependsOn": self.deps}, True)
 
     @property
-    def deps_no_version(self):
-        return self._deps_no_version
+    def ref(self):
+        return self._ref
 
-    @deps_no_version.setter
-    def deps_no_version(self, value):
-        self._deps_no_version = Array(value)
+    @ref.setter
+    def ref(self, value):
+        self._ref = value
+        if self.options.allow_new_versions:
+            self._ref_no_version, self._deps_no_version = import_bom_dependency(
+                {"ref": self.ref, "dependsOn": self.deps}, self.options.allow_new_versions)
 
     def clear(self):
         options = self.options
         self.__init__(dep={}, options=options)
 
     def to_dict(self):
-        return {"ref": self.ref, "dependsOn": self._deps}
+        return {"ref": self.ref, "dependsOn": self.deps}
 
 
 class BomDicts:
@@ -348,6 +355,15 @@ class BomDicts:
     @dependencies.setter
     def dependencies(self, value):
         _, _, _, self._dependencies, _ = import_bom_dict(self.options, {}, dependencies=value)
+
+
+    @property
+    def services(self):
+        return self._services
+
+    @services.setter
+    def services(self, value):
+        _, _, self._services, _, _ = import_bom_dict(self.options, {}, services=value)
 
     @property
     def vdrs(self):
@@ -507,16 +523,16 @@ class BomVdr:
         excludes bom-ref, affects, updated"""
         return all((
             self.id == other.id,
-            self._advisories == other._advisories,
+            self.advisories == other.advisories,
             self.analysis == other.analysis,
             self.cwes == other.cwes,
             self.description == other.description,
             self.detail == other.detail,
-            self._properties == other._properties,
+            self.properties == other.properties,
             self.published == other.published,
-            self._ratings == other._ratings,
+            self.ratings == other.ratings,
             self.recommendation == other.recommendation,
-            self._references == other._references,
+            self.references == other.references,
             self.source == other.source,
             ))
 
@@ -672,6 +688,8 @@ class CsafDicts:
 
     @vulnerabilities.setter
     def vulnerabilities(self, value):
+        if value and not isinstance(value[0], CsafVulnerability):
+            value = [CsafVulnerability(i, self.options) for i in value]
         self._vulnerabilities = Array(value)
 
     def get_refs(self):
@@ -710,7 +728,7 @@ class CsafScore:
 
     def __eq__(self, other):
         if not self.options.allow_new_data:
-            return self.cvss_v3 == other.cvss_v3 and self._products == other._products
+            return self.cvss_v3 == other.cvss_v3 and self.products == other.products
         a, b = order_documents(self, other)
         if a.cvss_v3 and a.cvss_v3 != b.cvss_v3:
             return False
