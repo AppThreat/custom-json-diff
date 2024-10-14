@@ -243,6 +243,7 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
         logger.info("No differences found.")
     else:
         logger.info("Differences found.")
+    diffs = sort_dict(diffs, options.sort_keys)
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
