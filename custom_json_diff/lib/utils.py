@@ -161,7 +161,7 @@ def recursive_remove_empty(d: Dict) -> Dict:
                 elif i:
                     flist.append(i)
             if flist:
-                filtered[k] = flist
+                filtered[k] = flist  # type: ignore
         else:
             filtered[k] = v
     return filtered

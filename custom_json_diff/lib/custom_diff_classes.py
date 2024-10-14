@@ -170,7 +170,7 @@ class BomComponent(OptionedClass):
         self._hashes = Array(comp.get("hashes", []))
         self._licenses = Array(comp.get("licenses", []))
         self.name = comp.get("name", "")
-        self.original_data = {}  # deprecated
+        self.original_data: Dict = {}  # deprecated
         self._properties = Array(comp.get("properties", []))
         self.publisher = comp.get("publisher", "")
         self.purl = comp.get("purl", "")
