@@ -10,7 +10,7 @@ from custom_json_diff.lib.utils import (
     compare_bom_refs,
     compare_date,
     compare_recommendations,
-    compare_versions, filter_empty,
+    compare_versions,
     import_config,
     split_bom_ref
 )
@@ -153,35 +153,41 @@ class BomComponent:
         self._hashes = Array(comp.get("hashes", []))
         self._licenses = Array(comp.get("licenses", []))
         self.name = comp.get("name", "")
-        self.options = options
-        # deprecated
-        self.original_data = comp
+        self.original_data = {}  # deprecated
         self._properties = Array(comp.get("properties", []))
         self.publisher = comp.get("publisher", "")
         self.purl = comp.get("purl", "")
         self.scope = comp.get("scope", [])
-        self.search_key = "" if options.allow_new_data else create_comp_key(comp, options.comp_keys)
+        self.search_key = ""  # deprecated
         self.version = comp.get("version", "")
 
     def __eq__(self, other):
         if not self.options.allow_new_data and not self.options.allow_new_versions:
-            return self.search_key == other.search_key and self._check_list_eq(other)
+            return all((self.bom_ref == other.bom_ref, self.purl == other.purl, self.version == other.version,
+                        self._check_unversioned_eq(other), self._check_list_eq(other)))
         c1, c2 = order_documents(self, other)
         if self.options.allow_new_versions and self.options.allow_new_data:
             return eq_allow_new_data_comp(c1, c2)
         if self.options.allow_new_versions:
             return all((
-                compare_versions(c1.version, c2.version, "<="), self._check_list_eq(other),
-                compare_bom_refs(c1.bom_ref, c2.bom_ref, "<="), compare_bom_refs(c1.purl, c2.purl, "<=")
+                compare_versions(c1.version, c2.version, "<="),
+                compare_bom_refs(c1.bom_ref, c2.bom_ref, "<="),
+                compare_bom_refs(c1.purl, c2.purl, "<="),
+                c1._check_unversioned_eq(c2),
+                c1._check_list_eq(c2)
             ))
         return eq_allow_new_data_comp(c1, c2)
 
-    def __ne__(self, other):
-        return not self == other
-
     def _check_list_eq(self, other):
-        return (self.properties == other.properties and self.evidence == other.evidence and
-                self.hashes == other.hashes and self.licenses == other.licenses)
+        return all((self.external_references == other.external_references,
+                    self.hashes == other.hashes, self.licenses == other.licenses,
+                    self.properties == other.properties))
+
+    def _check_unversioned_eq(self, other):
+        return all((self.author == other.author, self.component_type == other.component_type,
+                    self.evidence == other.evidence, self.group == other.group,
+                    self.name == other.name, self.publisher == other.publisher,
+                    self.scope == other.scope))
 
     @property
     def external_references(self):
@@ -229,9 +235,8 @@ class BomDependency:
     def __init__(self, dep: Dict, options: "Options"):
         self.ref = dep.get("ref", "")
         self._deps = Array(dep.get("dependsOn", []))
-        # deprecated
-        self.original_data: Dict = {}
-        self.ref_no_version, self._deps_no_version = import_bom_dependency(
+        self.original_data: Dict = {} # deprecated
+        self._ref_no_version, self._deps_no_version = import_bom_dependency(
             dep, options.allow_new_versions) if options.allow_new_versions else "", Array([])
         self.options = options
 
@@ -240,13 +245,10 @@ class BomDependency:
             return self.ref == other.ref and self.deps == other.deps
         d1, d2 = order_documents(self, other)
         if self.options.allow_new_data and self.options.allow_new_versions:
-            return d1.ref_no_version == d2.ref_no_version and advanced_eq_lists(d1.deps_no_version, d2.deps_no_version)
+            return d1._ref_no_version == d2._ref_no_version and advanced_eq_lists(d1._deps_no_version, d2._deps_no_version)
         if self.options.allow_new_data:
             return d1.ref == d2.ref and advanced_eq_lists(d1.deps, d2.deps)
-        return d1.ref_no_version == d2.ref_no_version and d1.deps_no_version == d2.deps_no_version
-
-    def __ne__(self, other):
-        return not self == other
+        return self._ref_no_version == other._ref_no_version and self._deps_no_version == other._deps_no_version
 
     @property
     def deps(self):
@@ -433,7 +435,7 @@ class BomDicts:
 class BomService:
     def __init__(self, svc: Dict, options: "Options"):
         self.search_key = create_comp_key(svc, options.svc_keys)
-        self.original_data = svc
+        self.original_data = svc  # deprecated
         self.name = svc.get("name", "")
         self._endpoints = Array(svc.get("endpoints", []))
         self.authenticated = svc.get("authenticated", "")
@@ -488,8 +490,6 @@ class BomVdr:
         self.updated = kwargs.get("updated") or (data.get("updated") or "")
 
     def __eq__(self, other):
-        if self.affects and not isinstance(self.affects[0], BomVdrAffects):
-            self.affects = [BomVdrAffects(i, self.options) for i in self.affects]
         if not self.options.allow_new_data and not self.options.allow_new_versions:
             return all((self._field_eq(other), self.bom_ref == other.bom_ref,
                         self.affects == other.affects, self.updated == other.updated))
@@ -599,6 +599,7 @@ class BomVdrAffects:
     def __init__(self, data: Dict, options: "Options"):
         self.data = data
         self.options = options
+        self.data = data  # deprecated
         self.ref = data.get("ref", "")
         self._versions = Array(data.get("versions", []))
 
@@ -861,7 +862,7 @@ def eq_allow_new_data_comp(bom_1: BomComponent, bom_2: BomComponent) -> bool:
     if bom_1.scope and bom_1.scope != bom_2.scope:
         return False
     if bom_1.options.allow_new_versions:
-        if bom_1.version and bom_1.version > bom_2.version:
+        if bom_1.version and not compare_versions(bom_1.version, bom_2.version, "<="):
             return False
         if bom_1.bom_ref and not compare_bom_refs(bom_1.bom_ref, bom_2.bom_ref, "<="):
             return False
