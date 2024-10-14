@@ -1,6 +1,6 @@
 [project]
 name = "custom-json-diff"
-version = "2.1.0"
+version = "2.1.1"
 description = "CycloneDx BOM and Oasis CSAF diffing and comparison tool."
 authors = [
   { name = "Caroline Russell", email = "caroline@appthreat.dev" },

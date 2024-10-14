@@ -10,7 +10,7 @@ from custom_json_diff.lib.utils import (
     compare_bom_refs,
     compare_date,
     compare_recommendations,
-    compare_versions, filter_empty,
+    compare_versions,
     import_config,
     split_bom_ref
 )
@@ -74,6 +74,22 @@ class Options:  # type: ignore
         self.comp_keys = list(set(self.comp_keys))
         self.svc_keys = list(set(self.svc_keys))
         self.sort_keys = list(set(self.sort_keys))
+
+
+class OptionedClass:
+    def __init__(self, options: Options):
+        self._options = options
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, value):
+        self._options = self._update_options(value)
+
+    def _update_options(self, options):
+        self._options = options
 
 
 class FlatDicts:
@@ -141,8 +157,9 @@ class FlatElement:
         return {self.key: self.value}
 
 
-class BomComponent:
+class BomComponent(OptionedClass):
     def __init__(self, comp: Dict, options: Options):
+        super().__init__(options)
         self.author = comp.get("author", "")
         self.bom_ref = comp.get("bom-ref", "")
         self.component_type = comp.get("type", "")
@@ -153,35 +170,41 @@ class BomComponent:
         self._hashes = Array(comp.get("hashes", []))
         self._licenses = Array(comp.get("licenses", []))
         self.name = comp.get("name", "")
-        self.options = options
-        # deprecated
-        self.original_data = comp
+        self.original_data: Dict = {}  # deprecated
         self._properties = Array(comp.get("properties", []))
         self.publisher = comp.get("publisher", "")
         self.purl = comp.get("purl", "")
         self.scope = comp.get("scope", [])
-        self.search_key = "" if options.allow_new_data else create_comp_key(comp, options.comp_keys)
+        self.search_key = ""  # deprecated
         self.version = comp.get("version", "")
 
     def __eq__(self, other):
         if not self.options.allow_new_data and not self.options.allow_new_versions:
-            return self.search_key == other.search_key and self._check_list_eq(other)
+            return all((self.bom_ref == other.bom_ref, self.purl == other.purl, self.version == other.version,
+                        self._check_unversioned_eq(other), self._check_list_eq(other)))
         c1, c2 = order_documents(self, other)
         if self.options.allow_new_versions and self.options.allow_new_data:
             return eq_allow_new_data_comp(c1, c2)
         if self.options.allow_new_versions:
             return all((
-                compare_versions(c1.version, c2.version, "<="), self._check_list_eq(other),
-                compare_bom_refs(c1.bom_ref, c2.bom_ref, "<="), compare_bom_refs(c1.purl, c2.purl, "<=")
+                compare_versions(c1.version, c2.version, "<="),
+                compare_bom_refs(c1.bom_ref, c2.bom_ref, "<="),
+                compare_bom_refs(c1.purl, c2.purl, "<="),
+                c1._check_unversioned_eq(c2),
+                c1._check_list_eq(c2)
             ))
         return eq_allow_new_data_comp(c1, c2)
 
-    def __ne__(self, other):
-        return not self == other
-
     def _check_list_eq(self, other):
-        return (self.properties == other.properties and self.evidence == other.evidence and
-                self.hashes == other.hashes and self.licenses == other.licenses)
+        return all((self.external_references == other.external_references,
+                    self.hashes == other.hashes, self.licenses == other.licenses,
+                    self.properties == other.properties))
+
+    def _check_unversioned_eq(self, other):
+        return all((self.author == other.author, self.component_type == other.component_type,
+                    self.evidence == other.evidence, self.group == other.group,
+                    self.name == other.name, self.publisher == other.publisher,
+                    self.scope == other.scope))
 
     @property
     def external_references(self):
@@ -192,20 +215,20 @@ class BomComponent:
         self._external_references = Array(value)
 
     @property
-    def licenses(self):
-        return self._licenses
-
-    @licenses.setter
-    def licenses(self, value):
-        self._licenses = Array(value)
-
-    @property
     def hashes(self):
         return self._hashes
 
     @hashes.setter
     def hashes(self, value):
         self._hashes = Array(value)
+
+    @property
+    def licenses(self):
+        return self._licenses
+
+    @licenses.setter
+    def licenses(self, value):
+        self._licenses = Array(value)
 
     @property
     def properties(self):
@@ -216,37 +239,33 @@ class BomComponent:
         self._properties = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "author": self.author, "bom-ref": self.bom_ref, "type": self.component_type,
             "description": self.description, "evidence": self.evidence,
-            "externalReferences": self._external_references, "group": self.group,
-            "hashes": self._hashes, "licenses": self._licenses, "name": self.name,
-            "properties": self._properties, "publisher": self.publisher, "purl": self.purl,
-            "scope": self.scope, "version": self.version})
+            "externalReferences": self.external_references, "group": self.group,
+            "hashes": self.hashes, "licenses": self.licenses, "name": self.name,
+            "properties": self.properties, "publisher": self.publisher, "purl": self.purl,
+            "scope": self.scope, "version": self.version}
 
 
-class BomDependency:
+class BomDependency(OptionedClass):
     def __init__(self, dep: Dict, options: "Options"):
-        self.ref = dep.get("ref", "")
+        super().__init__(options)
+        self._ref = dep.get("ref", "")
         self._deps = Array(dep.get("dependsOn", []))
-        # deprecated
-        self.original_data: Dict = {}
-        self.ref_no_version, self._deps_no_version = import_bom_dependency(
+        self.original_data: Dict = {} # deprecated
+        self._ref_no_version, self._deps_no_version = import_bom_dependency(
             dep, options.allow_new_versions) if options.allow_new_versions else "", Array([])
-        self.options = options
 
     def __eq__(self, other):
         if not self.options.allow_new_data and not self.options.allow_new_versions:
             return self.ref == other.ref and self.deps == other.deps
         d1, d2 = order_documents(self, other)
         if self.options.allow_new_data and self.options.allow_new_versions:
-            return d1.ref_no_version == d2.ref_no_version and advanced_eq_lists(d1.deps_no_version, d2.deps_no_version)
+            return d1._ref_no_version == d2._ref_no_version and advanced_eq_lists(d1._deps_no_version, d2._deps_no_version)
         if self.options.allow_new_data:
             return d1.ref == d2.ref and advanced_eq_lists(d1.deps, d2.deps)
-        return d1.ref_no_version == d2.ref_no_version and d1.deps_no_version == d2.deps_no_version
-
-    def __ne__(self, other):
-        return not self == other
+        return self._ref_no_version == other._ref_no_version and self._deps_no_version == other._deps_no_version
 
     @property
     def deps(self):
@@ -255,40 +274,43 @@ class BomDependency:
     @deps.setter
     def deps(self, value):
         self._deps = Array(value)
+        if self.options.allow_new_versions:
+            self._ref_no_version, self._deps_no_version = import_bom_dependency(
+                {"ref": self.ref, "dependsOn": self.deps}, True)
 
     @property
-    def deps_no_version(self):
-        return self._deps_no_version
+    def ref(self):
+        return self._ref
 
-    @deps_no_version.setter
-    def deps_no_version(self, value):
-        self._deps_no_version = Array(value)
+    @ref.setter
+    def ref(self, value):
+        self._ref = value
+        if self.options.allow_new_versions:
+            self._ref_no_version, self._deps_no_version = import_bom_dependency(
+                {"ref": self.ref, "dependsOn": self.deps}, self.options.allow_new_versions)
 
     def clear(self):
         options = self.options
         self.__init__(dep={}, options=options)
 
     def to_dict(self):
-        return {"ref": self.ref, "dependsOn": self._deps}
+        return {"ref": self.ref, "dependsOn": self.deps}
 
 
-class BomDicts:
+class BomDicts(OptionedClass):
     def __init__(self, options: "Options", filename: str, original_data: Dict, other_data: FlatDicts | None = None,
                  components: List | None = None, services: List | None = None,
                  dependencies: List | None = None, vulnerabilities: List | None = None):
-        self.options = options
+        super().__init__(options)
         self.options.doc_num = 1 if filename == options.file_1 else 2
         self.misc_data, self._components, self._services, self._dependencies, self._vdrs = import_bom_dict(
-            self.options, original_data, other_data, components, services, dependencies, vulnerabilities)
+            options, original_data, other_data, components, services, dependencies, vulnerabilities)
         self.filename = filename
 
     def __eq__(self, other):
         return (self.misc_data == other.misc_data and self.components == other.components and
                 self.services == other.services and self.dependencies == other.dependencies and
                 self.vdrs == self.vdrs)
-
-    def __ne__(self, other):
-        return not self == other
 
     def __sub__(self, other):
         other_data = self.misc_data - other.misc_data
@@ -332,20 +354,31 @@ class BomDicts:
         _, self._components, _, _, _ = import_bom_dict(self.options, {}, components=value)
 
     @property
-    def services(self):
-        return self._services
-
-    @services.setter
-    def services(self, value):
-        _, _, self._services, _, _ = import_bom_dict(self.options, {}, services=value)
-
-    @property
     def dependencies(self):
         return self._dependencies
 
     @dependencies.setter
     def dependencies(self, value):
         _, _, _, self._dependencies, _ = import_bom_dict(self.options, {}, dependencies=value)
+
+    def _update_options(self, value):
+        self._options = value
+        for i in self._components:
+            i.options = value
+        for i in self._services:
+            i.options = value
+        for i in self._dependencies:
+            i.options = value
+        for i in self._vdrs:
+            i.options = value
+
+    @property
+    def services(self):
+        return self._services
+
+    @services.setter
+    def services(self, value):
+        _, _, self._services, _, _ = import_bom_dict(self.options, {}, services=value)
 
     @property
     def vdrs(self):
@@ -409,8 +442,8 @@ class BomDicts:
         }
 
     def to_dict(self) -> Dict:
-        result = {
-            "components": filter_empty(self.options.include_empty, {
+        return {
+            "components": {
             "libraries": [i.to_dict() for i in self.components if
                           i.component_type == "library"],
             "frameworks": [i.to_dict() for i in self.components if
@@ -418,33 +451,29 @@ class BomDicts:
             "applications": [i.to_dict() for i in self.components if
                              i.component_type == "application"],
             "other_components": [i.to_dict() for i in self.components if
-                                 i.component_type not in ("library", "framework", "application")]}),
+                                 i.component_type not in ("library", "framework", "application")]},
             "dependencies": [i.to_dict() for i in self.dependencies],
             "services": [i.to_dict() for i in self.services],
             "vulnerabilities": [i.to_dict() for i in self.vdrs],
             "misc_data": self.misc_data.to_dict(unflat=True)
         }
-        return filter_empty(self.options.include_empty, result)
 
     def to_summary(self) -> Dict:
         return {self.filename: self.to_dict()}
 
 
-class BomService:
+class BomService(OptionedClass):
     def __init__(self, svc: Dict, options: "Options"):
+        super().__init__(options)
         self.search_key = create_comp_key(svc, options.svc_keys)
-        self.original_data = svc
+        self.original_data = svc  # deprecated
         self.name = svc.get("name", "")
         self._endpoints = Array(svc.get("endpoints", []))
         self.authenticated = svc.get("authenticated", "")
         self.x_trust_boundary = svc.get("x-trust-boundary", "")
-        self.options = options
 
     def __eq__(self, other):
         return self.search_key == other.search_key and self.endpoints == other.endpoints
-
-    def __ne__(self, other):
-        return not self == other
 
     @property
     def endpoints(self):
@@ -455,20 +484,20 @@ class BomService:
         self._endpoints = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "name": self.name,
             "endpoints": self._endpoints,
             "authenticated": self.authenticated,
             "x-trust-boundary": self.x_trust_boundary
-        })
+        }
 
 
-class BomVdr:
+class BomVdr(OptionedClass):
     """Class for holding bom vulnerability data"""
     def __init__(self, data: Optional[Dict] = None, options: "Options" = Options(), **kwargs):
+        super().__init__(options)
         if not data:
             data = {}
-        self.options = options
         self.id = kwargs.get("id") or (data.get("id") or "")
         self.bom_ref = kwargs.get("bom_ref") or (data.get("bom-ref") or "")
         self._advisories = Array(kwargs.get("advisories") or (data.get("advisories") or []))
@@ -488,8 +517,6 @@ class BomVdr:
         self.updated = kwargs.get("updated") or (data.get("updated") or "")
 
     def __eq__(self, other):
-        if self.affects and not isinstance(self.affects[0], BomVdrAffects):
-            self.affects = [BomVdrAffects(i, self.options) for i in self.affects]
         if not self.options.allow_new_data and not self.options.allow_new_versions:
             return all((self._field_eq(other), self.bom_ref == other.bom_ref,
                         self.affects == other.affects, self.updated == other.updated))
@@ -499,24 +526,21 @@ class BomVdr:
             return eq_allow_new_data_vdr(b1, b2)
         return self._field_eq(other) and compare_vdr_new_versions(b1, b2)
 
-    def __ne__(self, other):
-        return not self == other
-
     def _field_eq(self, other):
         """Compare fields that aren't affected by allow_new_versions
         excludes bom-ref, affects, updated"""
         return all((
             self.id == other.id,
-            self._advisories == other._advisories,
+            self.advisories == other.advisories,
             self.analysis == other.analysis,
             self.cwes == other.cwes,
             self.description == other.description,
             self.detail == other.detail,
-            self._properties == other._properties,
+            self.properties == other.properties,
             self.published == other.published,
-            self._ratings == other._ratings,
+            self.ratings == other.ratings,
             self.recommendation == other.recommendation,
-            self._references == other._references,
+            self.references == other.references,
             self.source == other.source,
             ))
 
@@ -572,11 +596,15 @@ class BomVdr:
 
     def clear(self):
         options = self.options
-        self.__init__()
-        self.options = options
+        self.__init__(options=options)
+
+    def _update_options(self, value):
+        self._options = value
+        for i in self._affects:
+            i.options = value
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "id": self.id,
             "bom-ref": self.bom_ref,
             "advisories": self._advisories,
@@ -592,13 +620,13 @@ class BomVdr:
             "references": self._references,
             "source": self.source,
             "updated": self.updated,
-        })
+        }
 
 
-class BomVdrAffects:
+class BomVdrAffects(OptionedClass):
     def __init__(self, data: Dict, options: "Options"):
-        self.data = data
-        self.options = options
+        super().__init__(options)
+        self.data = data  # deprecated
         self.ref = data.get("ref", "")
         self._versions = Array(data.get("versions", []))
 
@@ -615,9 +643,6 @@ class BomVdrAffects:
             return compare_bom_refs(a1.ref, a2.ref, "<=") and advanced_eq_lists(a1.versions, a2.versions)
         return False
 
-    def __ne__(self, other):
-        return not self == other
-
     @property
     def versions(self):
         return self._versions
@@ -627,16 +652,16 @@ class BomVdrAffects:
         self._versions = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {"ref": self.ref, "versions": self._versions})
+        return {"ref": self.ref, "versions": self.versions}
 
 
-class CsafDicts:
+class CsafDicts(OptionedClass):
     def __init__(self, options: "Options", filename: str, original_data: Dict | None = None,
                  document: FlatDicts | None = None, product_tree: FlatDicts | None = None,
                  vulnerabilities: List | None = None):
+        super().__init__(options)
         self.document, self.product_tree, self._vulnerabilities = import_csaf(
             options, original_data, document, product_tree, vulnerabilities)
-        self.options = options
         self.options.doc_num = 1 if filename == options.file_1 else 2
         self.filename = filename
 
@@ -646,9 +671,6 @@ class CsafDicts:
             self.product_tree == other.product_tree,
             self.vulnerabilities == other.vulnerabilities
         ))
-
-    def __ne__(self, other):
-        return not self == other
 
     def __sub__(self, other):
         document = self.document - other.document
@@ -671,7 +693,14 @@ class CsafDicts:
 
     @vulnerabilities.setter
     def vulnerabilities(self, value):
+        if value and not isinstance(value[0], CsafVulnerability):
+            value = [CsafVulnerability(i, self.options) for i in value]
         self._vulnerabilities = Array(value)
+
+    def _update_options(self, options):
+        self._options = options
+        for i in self._vulnerabilities:
+            i.options = options
 
     def get_refs(self):
         return {"vulnerabilities": {i.title for i in self.vulnerabilities}}
@@ -691,32 +720,29 @@ class CsafDicts:
         )
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "document": self.document.to_dict(unflat=True) if self.document else {},
             "product_tree": self.product_tree.to_dict(unflat=True) if self.product_tree else {},
             "vulnerabilities": [i.to_dict() for i in self.vulnerabilities] if self.vulnerabilities else []
-        })
+        }
 
     def to_summary(self) -> Dict:
         return {self.filename: self.to_dict()}
 
 
-class CsafScore:
+class CsafScore(OptionedClass):
     def __init__(self, data: Dict, options: "Options"):
+        super().__init__(options)
         self.cvss_v3 = data.get("cvss_v3", {})
         self._products = Array(data.get("products", []))
-        self.options = options
 
     def __eq__(self, other):
         if not self.options.allow_new_data:
-            return self.cvss_v3 == other.cvss_v3 and self._products == other._products
+            return self.cvss_v3 == other.cvss_v3 and self.products == other.products
         a, b = order_documents(self, other)
         if a.cvss_v3 and a.cvss_v3 != b.cvss_v3:
             return False
         return all(i in b.products for i in a.products)
-
-    def __ne__(self, other):
-        return not self == other
 
     @property
     def products(self):
@@ -727,21 +753,21 @@ class CsafScore:
         self._products = Array(value)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "cvss_v3": self.cvss_v3,
             "products": self._products
-        })
+        }
 
 
-class CsafVulnerability:
+class CsafVulnerability(OptionedClass):
     def __init__(self, data: Dict, options: "Options", **kwargs):
+        super().__init__(options)
         self._acknowledgements = Array(data.get("acknowledgements") or kwargs.get("acknowledgements", []))
         self.cve = data.get("cve") or kwargs.get("cve", "")
         self.cwe = data.get("cwe") or kwargs.get("cwe", "")
         self.discovery_date = data.get("discovery_date") or kwargs.get("discovery_date", "")
         self._ids = Array(data.get("ids") or kwargs.get("ids", []))
         self._notes = Array(data.get("notes") or kwargs.get("notes", []))
-        self.options = options
         self.product_status = data.get("product_status") or kwargs.get("product_status", {})
         self._references = Array(data.get("references") or kwargs.get("references", []))
         self._scores = Array([CsafScore(i, options) for i in (data.get("scores") or kwargs.get("scores", []))])
@@ -778,8 +804,10 @@ class CsafVulnerability:
             for attr, compare in attributes_to_compare
         )
 
-    def __ne__(self, other):
-        return not self == other
+    def _update_options(self, value):
+        self._options = value
+        for i in self._scores:
+            i.options = value
 
     @property
     def acknowledgements(self):
@@ -828,7 +856,7 @@ class CsafVulnerability:
         self.__init__(data={}, options=options)
 
     def to_dict(self):
-        return filter_empty(self.options.include_empty, {
+        return {
             "acknowledgements": self._acknowledgements,
             "cve": self.cve,
             "cwe": self.cwe,
@@ -839,7 +867,7 @@ class CsafVulnerability:
             "references": self._references,
             "scores": [i.to_dict() for i in self.scores],
             "title": self.title
-        })
+        }
 
 
 def advanced_eq_lists(lst_1: List, lst_2: List) -> bool:
@@ -861,7 +889,7 @@ def eq_allow_new_data_comp(bom_1: BomComponent, bom_2: BomComponent) -> bool:
     if bom_1.scope and bom_1.scope != bom_2.scope:
         return False
     if bom_1.options.allow_new_versions:
-        if bom_1.version and bom_1.version > bom_2.version:
+        if bom_1.version and not compare_versions(bom_1.version, bom_2.version, "<="):
             return False
         if bom_1.bom_ref and not compare_bom_refs(bom_1.bom_ref, bom_2.bom_ref, "<="):
             return False

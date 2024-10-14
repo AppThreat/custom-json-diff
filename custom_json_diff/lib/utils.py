@@ -22,7 +22,7 @@ recommendation_regex = re.compile(r"(?P<version>\d\S?.\d\S*)")
 def compare_bom_refs(v1: str, v2: str, comparator: str = "<=") -> bool:
     """Compares bom-refs allowing new versions"""
     if not v1 or not v2:
-        return v1==v2
+        return compare_generic(v1, v2, comparator)
     try:
         v1purl = packageurl.PackageURL.from_string(v1)
         v2purl = packageurl.PackageURL.from_string(v2)
@@ -30,19 +30,15 @@ def compare_bom_refs(v1: str, v2: str, comparator: str = "<=") -> bool:
         v2p = f"{v2purl.type}.{v2purl.namespace}.{v2purl.name}"
         v1v, v2v = v1purl.version, v2purl.version
     except ValueError:
-        if "@" in v1 and "@" in v2:
-            v1p, v1v = split_bom_ref(v1)
-            v2p, v2v = split_bom_ref(v2)
-        else:
-            logger.warning("Could not parse one or more of these bom-refs: %s, %s", v1, v2)
-            return v1== v2
+        v1p, v1v = split_bom_ref(v1)
+        v2p, v2v = split_bom_ref(v2)
     return v1p == v2p and compare_versions(v1v, v2v, comparator)
 
 
 def compare_date(dt1: str, dt2: str, comparator: str):
     """Compares two dates"""
     if not dt1 and not dt2:
-        return True
+        return compare_generic(dt1, dt2, comparator)
     elif not dt1 or not dt2:
         return False
     try:
@@ -50,7 +46,7 @@ def compare_date(dt1: str, dt2: str, comparator: str):
         date_2 = datetime.fromisoformat(dt2).date()
         return compare_generic(date_1, date_2, comparator)
     except ValueError:
-        return False
+        return compare_generic(dt1, dt2, comparator)
 
 
 def compare_generic(a: str | date | semver.Version, b: str | date | semver.Version, comparator):
@@ -74,17 +70,20 @@ def compare_generic(a: str | date | semver.Version, b: str | date | semver.Versi
 
 
 def compare_recommendations(v1: str, v2: str, comparator: str):
-    m1 = recommendation_regex.search(v1)
-    m2 = recommendation_regex.search(v2)
-    if m1 and m2:
-        return compare_versions(m1["version"], m2["version"], comparator)
-    logger.debug("Could not parse one or more of these recommendations: %s, %s", v1, v2)
-    return v1 == v2
+    if v1 and v2:
+        m1 = recommendation_regex.search(v1)
+        m2 = recommendation_regex.search(v2)
+        if m1 and m2:
+            return compare_versions(m1["version"], m2["version"], comparator)
+    elif not v1 and not v2:
+        return compare_generic(v1, v2, comparator)
+    logger.debug("Could not extract one or more of these recommendations: %s, %s", v1, v2)
+    return compare_generic(v1, v2, comparator)
 
 
 def compare_versions(v1: str|None, v2: str|None, comparator: str) -> bool:
     if not v1 and not v2:
-        return True
+        return compare_generic("", "", comparator)
     elif not v1 or not v2:
         return False
     v1 = v1.lstrip("v").rstrip(".") if v1 else ""
@@ -146,10 +145,30 @@ def file_write(filename: str | bytes, contents, error_msg: str = "", success_msg
             log.debug("File written: %s", filename)
 
 
+def recursive_remove_empty(d: Dict) -> Dict:
+    filtered = {}
+    for k, v in d.items():
+        if not v:
+            continue
+        if isinstance(v, dict):
+            filtered[k] = recursive_remove_empty(v)
+        elif isinstance(v, list):
+            flist = []
+            for i in v:
+                if isinstance(i, dict):
+                    if tmp := recursive_remove_empty(i):
+                        flist.append(tmp)
+                elif i:
+                    flist.append(i)
+            if flist:
+                filtered[k] = flist  # type: ignore
+        else:
+            filtered[k] = v
+    return filtered
+
+
 def filter_empty(include_empty: bool, d: Dict) -> Dict:
-    if not include_empty:
-        return {k: v for k, v in d.items() if v}
-    return d
+    return d if include_empty else recursive_remove_empty(d)
 
 
 def get_sort_key(data: Dict, sort_keys: List[str]) -> str | bool:
@@ -210,7 +229,7 @@ def json_dump(filename: str, data: Dict, compact: bool = False, error_msg: str =
 
 
 def manual_version_compare(v1: str, v2: str, comparator: str) -> bool:
-    if "." not in v1 or "." not in v2:
+    if ("." not in v1 and "-" not in v1) or ("." not in v2 and "-" not in v2):
         return compare_generic(v1, v2, comparator)
     version_1 = v1.replace("-", ".").split(".")
     version_2 = v2.replace("-", ".").split(".")
@@ -221,12 +240,21 @@ def manual_version_compare(v1: str, v2: str, comparator: str) -> bool:
         else:
             diff_len = v2_len - v1_len
             version_1.extend(["0"] * diff_len)
-    if "=" not in comparator:
-        comparator += "="
+    if comparator in ("<", ">"):
+        return manual_version_compare_noeq(version_1, version_2, comparator)
     for i, v in enumerate(version_1):
+        if compare_generic(v, version_2[i], comparator[0]):
+            return True
         if not compare_generic(v, version_2[i], comparator):
             return False
     return True
+
+
+def manual_version_compare_noeq(v1: List, v2: List, comparator: str) -> bool:
+    for i, v in enumerate(v1):
+        if compare_generic(v, v2[i], comparator):
+            return True
+    return False
 
 
 def render_bom_template(diffs, jinja_tmpl, options, stats_summary, status):
@@ -291,7 +319,7 @@ def sort_dict(result: Dict, sort_keys: List[str]) -> Dict:
     return result
 
 
-# Deprecated
+# deprecated
 def sort_dict_lists(result: Dict, sort_keys: List[str]) -> Dict:
     return sort_dict(result, sort_keys)
 
@@ -308,7 +336,7 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     """Sorts a list"""
     if isinstance(lst[0], dict):
         if sort_key := get_sort_key_list(lst, sort_keys):
-            lst = sorted((lst), key=lambda x: x[sort_key])
+            lst = sorted(lst, key=lambda x: x[sort_key])
         for i in lst:
             for k, v in i.items():
                 i[k] = sort_helper(v, sort_keys)
@@ -319,11 +347,15 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     return lst
 
 
-def split_bom_ref(bom_ref):
+def split_bom_ref(bom_ref: str):
+    if "@" not in bom_ref:
+        return bom_ref, ""
     if bom_ref.count("@") == 1:
         package, version = bom_ref.split("@")
     else:
         elements = bom_ref.split("@")
         version = elements.pop(-1)
         package = "".join(elements)
-    return package, version
+    if "?" in version:
+        version = version.split("?")[0]
+    return package, version.lstrip("v")

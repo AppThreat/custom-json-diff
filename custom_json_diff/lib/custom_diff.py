@@ -109,19 +109,19 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
                     diff_summary["components"]["other_components"].append(i.to_dict())  #type: ignore
     diff_summary["misc_data"] = (bom.misc_data - commons.misc_data).to_dict()
     diff_summary["components"] = filter_empty(bom.options.include_empty, diff_summary["components"])  #type: ignore
-    return filter_empty(commons.options.include_empty, diff_summary)
+    return diff_summary
 
 
 def generate_csaf_diff(csaf: CsafDicts, commons: CsafDicts, common_refs: Dict[str, Set]) -> Dict:
     return {
-        csaf.filename: filter_empty(commons.options.include_empty, {
-        "document": (csaf.document - commons.document).to_dict(),
-        "product_tree": (csaf.product_tree - commons.product_tree).to_dict(),
-        "vulnerabilities": [
-            i.to_dict() for i in csaf.vulnerabilities
-            if i.title not in common_refs["vulnerabilities"]
-        ]
-        })
+        csaf.filename: {
+            "document": (csaf.document - commons.document).to_dict(),
+            "product_tree": (csaf.product_tree - commons.product_tree).to_dict(),
+            "vulnerabilities": [
+                i.to_dict() for i in csaf.vulnerabilities
+                if i.title not in common_refs["vulnerabilities"]
+            ]
+        }
     }
 
 
@@ -223,7 +223,7 @@ def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
 def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Tuple[int, Dict]:
     b1, b2 = order_documents(bom_1, bom_2)
     common_bom = b1.intersection(b2, "common_summary")
-    output = common_bom.to_summary()
+    output = filter_empty(common_bom.options.include_empty, common_bom.to_summary())
     status, diffs = summarize_bom_diffs(b1, b2, common_bom)
     output |= {"diff_summary": diffs}
     return status, output
@@ -243,6 +243,7 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
         logger.info("No differences found.")
     else:
         logger.info("Differences found.")
+    diffs = sort_dict(diffs, options.sort_keys)
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
@@ -292,7 +293,8 @@ def summarize_bom_diffs(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> 
     summary_1 = generate_bom_diff(bom_1, commons, common_refs)
     summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
     status = max(get_bom_status(summary_1), get_bom_status(summary_2))
-    return status, {bom_1.filename: summary_1, bom_2.filename: summary_2}
+    return status, {bom_1.filename: filter_empty(bom_1.options.include_empty, summary_1),
+                    bom_2.filename: filter_empty(bom_1.options.include_empty, summary_2)}
 
 
 def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[int, Dict]:
@@ -302,4 +304,4 @@ def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDict
     diff_summary = generate_csaf_diff(csaf_1, commons, common_refs)
     diff_summary |= generate_csaf_diff(csaf_2, commons_2, common_refs)
     status = max(get_csaf_status(diff_summary[csaf_1.filename]), get_csaf_status(diff_summary[csaf_2.filename]))
-    return status, diff_summary
+    return status, filter_empty(csaf_1.options.include_empty, diff_summary)
