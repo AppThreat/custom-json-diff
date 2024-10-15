@@ -58,7 +58,8 @@
             {% endif %}
             {% if diff_vulnerabilities_1 or diff_vulnerabilities_2 %}
                 <tr>
-                    <th>vulnerabilities</th>
+                    <th>vulnerabilities<br><br>{{ diff_vulnerabilities_1 | length }}
+                        vs {{ diff_vulnerabilities_2 | length }}</th>
                     <td>{% for item in diff_vulnerabilities_1 %}
                         <details>
                             <summary>{{ item['title'] }}</summary>
@@ -192,9 +193,11 @@
                                                             <li>
                                                                 <details>
                                                                     <summary>{{ k }}:</summary>
-                                                                    <ul>{% for a in v %}
-                                                                        <li>{{ a }}</li></ul>
-                                                                    {% endfor %}
+                                                                    <ul>
+                                                                        {% for a in v %}
+                                                                            <li>{{ a }}</li>
+                                                                        {% endfor %}
+                                                                    </ul>
                                                                 </details>
                                                             </li>
                                                         {% endif %}
@@ -244,7 +247,7 @@
             {% endif %}
             {% if common_vulnerabilities|length > 0 %}
                 <tr>
-                    <th>vulnerabilities</th>
+                    <th>vulnerabilities ({{ common_vulnerabilities|length }})</th>
                     <td>{% for item in common_vulnerabilities %}
                         <details>
                             <summary>{{ item['title'] }}</summary>
