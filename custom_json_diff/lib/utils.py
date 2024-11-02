@@ -106,10 +106,14 @@ def export_html_report(outfile: str, diffs: Dict, options: "Options", status: in
     template = file_read(template_file)
     jinja_env = Environment(autoescape=True)
     jinja_tmpl = jinja_env.from_string(str(template))
-    if options.preconfig_type == "bom":
-        report_result = render_bom_template(diffs, jinja_tmpl, options, stats_summary, status)
-    else:
-        report_result = render_csaf_template(diffs, jinja_tmpl, options, status)
+    try:
+        if options.preconfig_type == "bom":
+            report_result = render_bom_template(diffs, jinja_tmpl, options, stats_summary, status)
+        else:
+            report_result = render_csaf_template(diffs, jinja_tmpl, options, status)
+    except TypeError:
+        logger.warning(f"Could not render html report for {options.file_1} and {options.file_2} BOM diff. Likely an expected key is missing.")
+        return
     file_write(outfile, report_result, error_msg=f"Unable to generate HTML report at {outfile}.",
                success_msg=f"HTML report generated: {outfile}")
 

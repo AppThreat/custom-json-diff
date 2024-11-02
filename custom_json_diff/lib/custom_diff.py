@@ -31,9 +31,6 @@ def add_short_ref_for_report(diffs: Dict, options: "Options") -> Dict:
         diffs["diff_summary"][options.file_2].get("dependencies", []), purl_regex)
     diffs["common_summary"]["dependencies"] = parse_purls(
         diffs["common_summary"].get("dependencies", []), purl_regex)
-    diffs["diff_summary"][options.file_1] = filter_empty(options.include_empty, diffs["diff_summary"][options.file_1])
-    diffs["diff_summary"][options.file_2] = filter_empty(options.include_empty, diffs["diff_summary"][options.file_2])
-    diffs["common_summary"] = filter_empty(options.include_empty, diffs["common_summary"])
     return diffs
 
 
@@ -108,7 +105,6 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
                 case _:
                     diff_summary["components"]["other_components"].append(i.to_dict())  #type: ignore
     diff_summary["misc_data"] = (bom.misc_data - commons.misc_data).to_dict()
-    diff_summary["components"] = filter_empty(bom.options.include_empty, diff_summary["components"])  #type: ignore
     return diff_summary
 
 
@@ -223,7 +219,7 @@ def parse_purls(deps: List[Dict], regex: re.Pattern) -> List[Dict]:
 def perform_bom_diff(bom_1: BomDicts, bom_2: BomDicts) -> Tuple[int, Dict]:
     b1, b2 = order_documents(bom_1, bom_2)
     common_bom = b1.intersection(b2, "common_summary")
-    output = filter_empty(common_bom.options.include_empty, common_bom.to_summary())
+    output = common_bom.to_summary()
     status, diffs = summarize_bom_diffs(b1, b2, common_bom)
     output |= {"diff_summary": diffs}
     return status, output
@@ -253,6 +249,8 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
     if options.output:
+        if not options.include_empty:
+            diffs = filter_empty(options.include_empty, diffs)
         json_dump(options.output, diffs,
                    error_msg=f"Failed to export diff results to {options.output}.",
                    success_msg=f"Diff results written to {options.output}.")
@@ -293,8 +291,7 @@ def summarize_bom_diffs(bom_1: BomDicts, bom_2: BomDicts, commons: BomDicts) -> 
     summary_1 = generate_bom_diff(bom_1, commons, common_refs)
     summary_2 = generate_bom_diff(bom_2, commons_2, common_refs)
     status = max(get_bom_status(summary_1), get_bom_status(summary_2))
-    return status, {bom_1.filename: filter_empty(bom_1.options.include_empty, summary_1),
-                    bom_2.filename: filter_empty(bom_1.options.include_empty, summary_2)}
+    return status, {bom_1.filename: summary_1, bom_2.filename: summary_2}
 
 
 def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDicts) -> Tuple[int, Dict]:
@@ -304,4 +301,4 @@ def summarize_csaf_diffs(csaf_1: CsafDicts, csaf_2: CsafDicts, commons: CsafDict
     diff_summary = generate_csaf_diff(csaf_1, commons, common_refs)
     diff_summary |= generate_csaf_diff(csaf_2, commons_2, common_refs)
     status = max(get_csaf_status(diff_summary[csaf_1.filename]), get_csaf_status(diff_summary[csaf_2.filename]))
-    return status, filter_empty(csaf_1.options.include_empty, diff_summary)
+    return status, diff_summary
