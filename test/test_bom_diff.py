@@ -14,6 +14,7 @@ from custom_json_diff.lib.custom_diff import (
 from custom_json_diff.lib.custom_diff_classes import (
     BomComponent, BomDependency, BomDicts, FlatDicts, Options, BomVdr, BomVdrAffects
 )
+from custom_json_diff.lib.utils import filter_empty, json_dump
 
 
 @pytest.fixture
@@ -347,7 +348,7 @@ def test_bom_diff(results, options_1):
         'other_components': 0, 'services': 8, 'vulnerabilities': 0}
     assert add_short_ref_for_report(result_summary, j1.options).get("diff_summary", {}).get(
         j2.filename, {}).get("dependencies") == [
-               {'ref': 'pkg:maven/javax.activation/activation@1.1?type=jar',
+               {'dependsOn': [], 'ref': 'pkg:maven/javax.activation/activation@1.1?type=jar',
                 'short_ref': 'javax.activation/activation@1.1'}]
 
 
@@ -367,6 +368,8 @@ def test_bom_diff_component_options(results, bom_dicts_1, bom_dicts_2, bom_dicts
 
     _, result_summary = perform_bom_diff(bom_dicts_7, bom_dicts_8)
     assert result_summary == results["result_5"]
+
+    json_dump("test/test_data.json", results, compact=True)
 
 
 def test_bom_diff_vdr_options(options_1):

@@ -589,17 +589,17 @@
                             <summary>{{ item['short_ref'] }}</summary>
                             <ul>
                                 <li>ref: {{ item['ref'] }}</li>
-                                {% if item['dependsOn']|length > 0 %}
-                                    <li>dependencies:</li>
-                                    <ul>
-                                        {% for dep in item['dependsOn'] %}
-                                            <li>{{ dep }}</li>
-                                        {% endfor %}
-                                    </ul>
+                            {% for key, value in item|items %}
+                                {% if key == "dependsOn" %}
+                                    <li>dependencies:
+                                        <ul>
+                                            {% for dep in item['dependsOn'] %}
+                                                <li>{{ dep }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
                                 {% endif %}
-                                {% if item['dependsOn']|length == 0 %}
-                                    <li>dependencies: N/A</li>
-                                {% endif %}
+                            {% endfor %}
                             </ul>
                         </details>
                     {% endfor %}</td>
@@ -608,19 +608,18 @@
                             <summary>{{ item['short_ref'] }}</summary>
                             <ul>
                                 <li>ref: {{ item['ref'] }}</li>
-                                {% if item['dependsOn']|length > 0 %}
-                                    <li>dependencies:</li>
-                                    <ul>
-                                        {% for dep in item['dependsOn'] %}
-                                            <li>{{ dep }}</li>
-                                        {% endfor %}
-                                    </ul>
+                            {% for key, value in item|items %}
+                                {% if key == "dependsOn" %}
+                                    <li>dependencies:
+                                        <ul>
+                                            {% for dep in item['dependsOn'] %}
+                                                <li>{{ dep }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
                                 {% endif %}
-                                {% if item['dependsOn']|length == 0 %}
-                                    <li>dependencies: N/A</li>
-                                {% endif %}
+                            {% endfor %}
                             </ul>
-
                         </details>
                     {% endfor %}</td>
                 </tr>
@@ -1160,7 +1159,8 @@
                             <summary>{{ item['short_ref'] }}</summary>
                             <ul>
                                 <li>ref: {{ item['ref'] }}</li>
-                                {% if item['dependsOn']|length >0 %}
+                            {% for key, value in item|items %}
+                                {% if key == "dependsOn" %}
                                     <li>dependencies:
                                         <ul>
                                             {% for dep in item['dependsOn'] %}
@@ -1169,9 +1169,7 @@
                                         </ul>
                                     </li>
                                 {% endif %}
-                                {% if item['dependsOn']|length == 0 %}
-                                    <li>dependencies: N/A</li>
-                                {% endif %}
+                            {% endfor %}
                             </ul>
                         </details>
                     {% endfor %}</td>
