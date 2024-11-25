@@ -46,6 +46,7 @@ class Options:  # type: ignore
     svc_keys: List = field(default_factory=list)
     doc_num: int = 1
     include_empty: bool = False
+    bom_profile: str = ""
 
     def __post_init__(self):
         if self.config:
@@ -60,9 +61,9 @@ class Options:  # type: ignore
             self.include = toml_data.get("settings", {}).get("include_extra", [])
             self.include_empty = toml_data.get("settings", {}).get("include_empty", False)
         if self.preconfig_type == "bom":
-            tmp_exclude, tmp_bom_key_fields, tmp_service_key_fields, self.do_advanced = (
-                get_cdxgen_excludes(self.include, self.allow_new_versions, self.allow_new_data))
-            self.comp_keys.extend(tmp_bom_key_fields)
+            tmp_exclude, tmp_service_key_fields, self.do_advanced = (
+                get_cdxgen_excludes(self.include, self.allow_new_data))
+            # self.comp_keys.extend(tmp_bom_key_fields)
             self.svc_keys.extend(tmp_service_key_fields)
             self.exclude.extend(tmp_exclude)
             self.sort_keys.extend(["purl", "bom-ref", "content", "cve", "id", "url", "text", "ref", "name", "value", "location"])
@@ -71,6 +72,7 @@ class Options:  # type: ignore
             self.sort_keys.extend(["text", "title", "product_id", "url"])
         self.exclude = list(set(self.exclude))
         self.include = list(set(self.include))
+        # deprecated
         self.comp_keys = list(set(self.comp_keys))
         self.svc_keys = list(set(self.svc_keys))
         self.sort_keys = list(set(self.sort_keys))
@@ -980,7 +982,7 @@ def create_search_key(key: str, value: str) -> str:
     return combined_key
 
 
-def get_cdxgen_excludes(includes: List[str], allow_new_versions: bool, allow_new_data: bool) -> Tuple[List[str], List[str], List[str], bool]:
+def get_cdxgen_excludes(includes: List[str], allow_new_data: bool) -> Tuple[List[str], List[str], bool]:
     excludes = {'metadata.timestamp': 'metadata.timestamp', 'serialNumber': 'serialNumber',
                 'metadata.tools.components.[].version': 'metadata.tools.components.[].version',
                 'metadata.tools.components.[].purl': 'metadata.tools.components.[].purl',
@@ -990,17 +992,12 @@ def get_cdxgen_excludes(includes: List[str], allow_new_versions: bool, allow_new
                 'externalReferences': 'components.[].externalReferences',
                 'externalreferences': 'components.[].externalReferences'}
     if allow_new_data:
-        component_keys = []
         service_keys = []
     else:
-        component_keys = ['name', 'author', 'publisher', 'group', 'type', 'scope', 'description']
         service_keys = ['name', 'authenticated', 'x-trust-boundary', 'endpoints']
-        if not allow_new_versions:
-            component_keys.extend([i for i in ('version', 'purl', 'bom-ref', 'version') if i not in excludes])
 
     return (
         [v for k, v in excludes.items() if k not in includes],
-        [v for v in component_keys if v not in excludes],
         [v for v in service_keys if v not in excludes],
         allow_new_data,
     )

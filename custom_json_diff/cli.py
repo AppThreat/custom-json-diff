@@ -52,9 +52,9 @@ def build_args() -> argparse.Namespace:
         dest="config"
     )
     subparsers = parser.add_subparsers(help="subcommand help")
-    parser_pc_diff = subparsers.add_parser("preset-diff", help="Compare CycloneDX BOMs or Oasis CSAFs")
-    parser_pc_diff.set_defaults(preset_type="")
-    parser_pc_diff.add_argument(
+    parser_ps_diff = subparsers.add_parser("preset-diff", help="Compare CycloneDX BOMs or Oasis CSAFs")
+    parser_ps_diff.set_defaults(preset_type="")
+    parser_ps_diff.add_argument(
         "--allow-new-versions",
         "-anv",
         action="store_true",
@@ -62,7 +62,7 @@ def build_args() -> argparse.Namespace:
         dest="allow_new_versions",
         default=False,
     )
-    parser_pc_diff.add_argument(
+    parser_ps_diff.add_argument(
         "--allow-new-data",
         "-and",
         action="store_true",
@@ -70,13 +70,13 @@ def build_args() -> argparse.Namespace:
         dest="allow_new_data",
         default=False,
     )
-    parser_pc_diff.add_argument(
+    parser_ps_diff.add_argument(
         "--type",
         action="store",
         help="Either bom or csaf",
         dest="preset_type",
     )
-    parser_pc_diff.add_argument(
+    parser_ps_diff.add_argument(
         "-r",
         "--report-template",
         action="store",
@@ -84,19 +84,24 @@ def build_args() -> argparse.Namespace:
         dest="report_template",
         default="",
     )
-    parser_pc_diff.add_argument(
+    parser_ps_diff.add_argument(
         "--include-extra",
         action="store",
         help="BOM only - include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).",
         dest="include",
     )
-    parser_pc_diff.add_argument(
+    parser_ps_diff.add_argument(
         "--include-empty",
         "-e",
         action="store_true",
         default=False,
         dest="include_empty",
         help="Include keys with empty values in summary.",
+    )
+    parser_ps_diff.add_argument(
+        "--bom-profile",
+        "-b",
+        help="Beta feature. Options: gn, gnv, nv -> only compare bom group/name/version."
     )
     parser.add_argument(
         "-x",
@@ -124,6 +129,8 @@ def main():
     preset_type = args.preset_type.lower()
     if preset_type and preset_type not in ("bom", "csaf"):
         raise ValueError("Preconfigured type must be either bom or csaf.")
+    if args.bom_profile and args.bom_profile not in ("gn", "gnv", "nv"):
+        raise ValueError("BOM profile must be either gn, gnv, or nv.")
     options = Options(
         allow_new_versions=args.allow_new_versions,
         allow_new_data=args.allow_new_data,

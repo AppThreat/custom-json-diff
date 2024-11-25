@@ -37,7 +37,7 @@ options:
 
 preset-diff usage
 ```
-usage: custom-json-diff preset-diff [-h] [--allow-new-versions] [--allow-new-data] [--type PRESET_TYPE] [-r REPORT_TEMPLATE] [--include-extra INCLUDE]
+usage: custom-json-diff preset-diff [-h] [--allow-new-versions] [--allow-new-data] [--type PRESET_TYPE] [-r REPORT_TEMPLATE] [--include-extra INCLUDE] [--include-empty] [--bom-profile BOM_PROFILE]
 
 options:
   -h, --help            show this help message and exit
@@ -50,6 +50,9 @@ options:
                         Jinja2 template to use for report generation.
   --include-extra INCLUDE
                         BOM only - include properties/evidence/licenses/hashes/externalReferences (list which with comma, no space, inbetween).
+  --include-empty, -e   Include keys with empty values in summary.
+  --bom-profile BOM_PROFILE, -b BOM_PROFILE
+                        Beta feature. Options: gn, gnv, nv -> only compare bom group/name/version. 
 
 ```
 ## Preset Diffs

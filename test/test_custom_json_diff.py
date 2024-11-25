@@ -3,7 +3,7 @@ import json
 import pytest
 
 from custom_json_diff.lib.custom_diff import (
-    compare_dicts, get_bom_status, get_diff, json_to_class
+    compare_dicts, filter_on_bom_profile, get_bom_status, get_diff, json_to_class
 )
 from custom_json_diff.lib.custom_diff_classes import Options
 
@@ -90,3 +90,18 @@ def test_get_bom_status():
     assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 2
     diff_summary_1["services"] = [{"name": "test"}]
     assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 3
+
+
+def test_filter_on_bom_profile():
+    data = {"components": [{"name": "component1", "version": "1.0", "group": "group1"},
+                           {"name": "component2", "version": "2.0"}]}
+    assert filter_on_bom_profile(data, {"name", "version"}) == {'components': [{'name': 'component1', 'version': '1.0'},
+                {'name': 'component2', 'version': '2.0'}]}
+    data = {"components": [{"name": "component1", "version": "1.0", "group": "group1"}]}
+    assert filter_on_bom_profile(data, {"name", "group"}) == {"components": [{"name": "component1", "group": "group1"}]}
+    assert filter_on_bom_profile({"components": []}, {"name"}) == {"components": []}
+    assert filter_on_bom_profile({}, {"name"}) == {}
+    assert filter_on_bom_profile( {"components": []}, {"name"}) == {"components": []}
+    data = {"metadata": {"author": "test"},
+        "components": [{"name": "component1", "version": "1.0"}]}
+    assert filter_on_bom_profile(data, {"name"}) == {"metadata": {"author": "test"}, "components": [{"name": "component1"}]}
