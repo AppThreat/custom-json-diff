@@ -71,8 +71,30 @@ def compare_dicts(options: "Options") -> Tuple[int, "BomDicts|CsafDicts|FlatDict
 
 
 def filter_dict(data: Dict, options: "Options") -> FlatDicts:
+    if options.bom_profile:
+        match options.bom_profile:
+            case "gnv":
+                data = filter_on_bom_profile(data, {"group", "name", "version"})
+            case "gn":
+                data = filter_on_bom_profile(data, {"group", "name"})
+            case "nv":
+                data = filter_on_bom_profile(data, {"name", "version"})
     data = flatten(sort_dict_lists(data, options.sort_keys))
     return FlatDicts(data).filter_out_keys(options.exclude)
+
+
+def filter_on_bom_profile(data: Dict, profile_fields: Set) -> Dict:
+    if not data.get("components"):
+        return data
+    new_components = []
+    for comp in data["components"]:
+        ncomp = {}
+        for key, value in comp.items():
+            if key in profile_fields:
+                ncomp[key] = value
+        new_components.append(ncomp)
+    data["components"] = new_components
+    return data
 
 
 def generate_counts(data: Dict) -> Dict:

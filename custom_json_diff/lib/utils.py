@@ -101,8 +101,10 @@ def export_html_report(outfile: str, diffs: Dict, options: "Options", status: in
                        stats_summary: Dict | None = None) -> None:
     if options.report_template:
         template_file = options.report_template
+    elif options.bom_profile:
+        template_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bom_diff_template_minimal.j2")
     else:
-        template_file = options.report_template or os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{options.preconfig_type}_diff_template.j2")
+        template_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), f"{options.preconfig_type}_diff_template.j2")
     template = file_read(template_file)
     jinja_env = Environment(autoescape=True)
     jinja_tmpl = jinja_env.from_string(str(template))
@@ -112,7 +114,7 @@ def export_html_report(outfile: str, diffs: Dict, options: "Options", status: in
         else:
             report_result = render_csaf_template(diffs, jinja_tmpl, options, status)
     except TypeError:
-        logger.warning(f"Could not render html report for {options.file_1} and {options.file_2} BOM diff. Likely an expected key is missing.")
+        logger.warning(f"Could not render html report for {options.file_1} and {options.file_2} {options.preconfig_type} diff. Likely an expected key is missing.")
         return
     file_write(outfile, report_result, error_msg=f"Unable to generate HTML report at {outfile}.",
                success_msg=f"HTML report generated: {outfile}")
