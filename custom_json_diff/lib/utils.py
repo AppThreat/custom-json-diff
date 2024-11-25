@@ -4,7 +4,7 @@ import os
 import re
 import sys
 from datetime import date, datetime
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import Any, Dict, List, Tuple, TYPE_CHECKING
 
 import packageurl
 import semver
@@ -264,6 +264,8 @@ def manual_version_compare_noeq(v1: List, v2: List, comparator: str) -> bool:
 
 
 def render_bom_template(diffs, jinja_tmpl, options, stats_summary, status):
+    if options.bom_profile:
+        return render_minimal_bom_template(diffs, jinja_tmpl, options, stats_summary, status)
     return jinja_tmpl.render(
         common_lib=diffs["common_summary"].get("components", {}).get("libraries", []),
         common_frameworks=diffs["common_summary"].get("components", {}).get("frameworks", []),
@@ -294,6 +296,68 @@ def render_bom_template(diffs, jinja_tmpl, options, stats_summary, status):
         stats=stats_summary,
         diff_status=status,
     )
+
+
+def render_minimal_bom_template(diffs, jinja_tmpl, options, stats_summary, status):
+    common_components, diff_components_1, diff_components_2 = get_minimal_components_lists(diffs, options)
+    return jinja_tmpl.render(
+        common_services=diffs["common_summary"].get("services", []),
+        common_deps=diffs["common_summary"].get("dependencies", []),
+        common_other=common_components,
+        common_vdrs=diffs["common_summary"].get("vulnerabilities", []),
+        common_misc_data=json.dumps(diffs["common_summary"]["misc_data"]).replace("\\n", " ") if diffs["common_summary"].get("misc_data") else None,
+        diff_other_1=diff_components_1,
+        diff_other_2=diff_components_2,
+        diff_services_1=diffs["diff_summary"].get(options.file_1, {}).get("services", []),
+        diff_services_2=diffs["diff_summary"].get(options.file_2, {}).get("services", []),
+        diff_deps_1=diffs["diff_summary"].get(options.file_1, {}).get("dependencies", []),
+        diff_deps_2=diffs["diff_summary"].get(options.file_2, {}).get("dependencies", []),
+        diff_vdrs_1=diffs["diff_summary"].get(options.file_1, {}).get("vulnerabilities", []),
+        diff_vdrs_2=diffs["diff_summary"].get(options.file_2, {}).get("vulnerabilities", []),
+        misc_data_1=json.dumps(diffs["diff_summary"][options.file_1]["misc_data"]).replace("\\n", " ") if diffs["diff_summary"].get(options.file_1, {}).get("misc_data", {}) else None,
+        misc_data_2=json.dumps(diffs["diff_summary"][options.file_2]["misc_data"]).replace("\\n", " ") if diffs["diff_summary"].get(options.file_2, {}).get("misc_data", {}) else None,
+        bom_1=options.file_1,
+        bom_2=options.file_2,
+        stats=stats_summary,
+        diff_status=status,
+    )
+
+
+def get_minimal_components_lists(diffs: Dict, options: "Options") -> Tuple[List, List, List]:
+    match options.bom_profile:
+        case "gn":
+            common_components = [f"{i.get('group')}/{i.get('name')}".lstrip("/") for i in
+                                 diffs["common_summary"].get("components", {}).get(
+                                     "other_components", [])]
+            diff_components_1 = [f"{i.get('group')}/{i.get('name')}".lstrip("/") for i in
+                                 diffs["diff_summary"].get(options.file_1, {}).get(
+                                     "components", {}).get("other_components", [])]
+            diff_components_2 = [f"{i.get('group')}/{i.get('name')}".lstrip("/") for i in
+                                 diffs["diff_summary"].get(options.file_2, {}).get(
+                                     "components", {}).get("other_components", [])]
+        case "nv":
+            common_components = [f"{i.get('name')}@{i.get('version')}".rstrip("@") for i in
+                                 diffs["common_summary"].get("components", {}).get(
+                                     "other_components", [])]
+            diff_components_1 = [f"{i.get('name')}@{i.get('version')}".rstrip("@") for i in
+                                 diffs["diff_summary"].get(options.file_1, {}).get(
+                                     "components", {}).get("other_components", [])]
+            diff_components_2 = [f"{i.get('name')}@{i.get('version')}".rstrip("@") for i in
+                                 diffs["diff_summary"].get(options.file_2, {}).get(
+                                     "components", {}).get("other_components", [])]
+        case _:
+            common_components = [
+                f"{i.get('group')}/{i.get('name')}@{i.get('version')}".lstrip("/").rstrip("@") for
+                i in diffs["common_summary"].get("components", {}).get("other_components", [])]
+            diff_components_1 = [
+                f"{i.get('group')}/{i.get('name')}@{i.get('version')}".lstrip("/").rstrip("@") for
+                i in diffs["diff_summary"].get(options.file_1, {}).get("components", {}).get(
+                    "other_components", [])]
+            diff_components_2 = [
+                f"{i.get('group')}/{i.get('name')}@{i.get('version')}".lstrip("/").rstrip("@") for
+                i in diffs["diff_summary"].get(options.file_2, {}).get("components", {}).get(
+                    "other_components", [])]
+    return common_components, diff_components_1, diff_components_2
 
 
 def render_csaf_template(diffs, jinja_tmpl, options, status):
@@ -353,7 +417,7 @@ def sort_list(lst: List, sort_keys: List[str]) -> List:
     return lst
 
 
-def split_bom_ref(bom_ref: str):
+def split_bom_ref(bom_ref: str) -> Tuple[str, str]:
     if "@" not in bom_ref:
         return bom_ref, ""
     if bom_ref.count("@") == 1:
