@@ -118,7 +118,7 @@ def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Di
 
 
 def get_unique_components(bom: BomDicts, common_refs: Dict):
-    components = {"applications": [], "frameworks": [], "libraries": [], "other_components": []}
+    components: Dict[str, List] = {"applications": [], "frameworks": [], "libraries": [], "other_components": []}
     if bom.options.bom_profile:
         for i in bom.components:
             match bom.options.bom_profile:
