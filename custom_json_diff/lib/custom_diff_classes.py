@@ -391,18 +391,18 @@ class BomDicts(OptionedClass):
         _, _, _, _, self._vdrs = import_bom_dict(self.options, {}, vulnerabilities=value)
 
     def intersection(self, other, title: str = "") -> "BomDicts":
-        components = []
-        dependencies = []
-        services = []
-        vulnerabilities = []
+        components = Array([])
+        dependencies = Array([])
+        services = Array([])
+        vulnerabilities = Array([])
         if self.components and other.components:
-            components = [i for i in self.components if i in other.components]
+            components = Array([i for i in self.components if i in other.components])
         if self.services and other.services:
-            services = [i for i in self.services if i in other.services]
+            services = Array([i for i in self.services if i in other.services])
         if self.dependencies and other.dependencies:
-            dependencies = [i for i in self.dependencies if i in other.dependencies]
+            dependencies = Array([i for i in self.dependencies if i in other.dependencies])
         if self.vdrs and other.vdrs:
-            vulnerabilities = [i for i in self.vdrs if i in other.vdrs]
+            vulnerabilities = Array([i for i in self.vdrs if i in other.vdrs])
         other_data = self.misc_data.intersection(other.misc_data)
         options = deepcopy(self.options)
         return BomDicts(
@@ -436,12 +436,21 @@ class BomDicts(OptionedClass):
                 "vulnerabilities": len(self.vdrs)}
 
     def get_refs(self) -> Dict:
-        return {
-            "components": {i.bom_ref for i in self.components},
-            "dependencies": {i.ref for i in self.dependencies},
-            "services": {i.search_key for i in self.services},
-            "vdrs": {i.bom_ref for i in self.vdrs}
-        }
+        refs = {
+                "dependencies": {i.ref for i in self.dependencies},
+                "services": {i.search_key for i in self.services},
+                "vdrs": {i.bom_ref for i in self.vdrs}
+            }
+        match self.options.bom_profile:
+            case "gnv":
+                refs |= {"components": {f"{i.group}/{i.name}@{i.version}" for i in self.components}}
+            case "gn":
+                refs |= {"components": {f"{i.group}/{i.name}" for i in self.components}}
+            case "nv":
+                refs |= {"components": {f"{i.name}@{i.version}" for i in self.components}}
+            case _:
+                refs |= {"components": {i.bom_ref for i in self.components}}
+        return refs
 
     def to_dict(self) -> Dict:
         return {
@@ -1031,7 +1040,7 @@ def import_bom_dict(
         if not value:
             elements[i] = []
     components, services, dependencies, vulnerabilities = elements
-    return other_data, Array(components), Array(services), Array(dependencies), Array(vulnerabilities)  # type: ignore
+    return other_data, Array(dedupe_components(components)), Array(services), Array(dependencies), Array(vulnerabilities)  # type: ignore
 
 
 def import_csaf(options: "Options", original_data: Dict | None = None, document: FlatDicts | None = None,
@@ -1092,3 +1101,11 @@ def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, Li
         if key not in {"components", "dependencies", "services", "vulnerabilities"}:
             other_data |= {key: value}
     return FlatDicts(other_data), components, services, dependencies, vulnerabilities
+
+
+def dedupe_components(components: List) -> List:
+    deduped = []
+    for component in components:
+        if component not in deduped:
+            deduped.append(component)
+    return deduped

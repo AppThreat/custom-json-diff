@@ -108,26 +108,43 @@ def generate_counts(data: Dict) -> Dict:
 
 
 def generate_bom_diff(bom: BomDicts, commons: BomDicts, common_refs: Dict) -> Dict:
-    diff_summary = {
-        "components": {"applications": [], "frameworks": [], "libraries": [],
-                                   "other_components": []},
+    return {
+        "components": get_unique_components(bom, common_refs),
         "dependencies": [i.to_dict() for i in bom.dependencies if i.ref not in common_refs["dependencies"]],
         "services": [i.to_dict() for i in bom.services if i.search_key not in common_refs["services"]],
-        "vulnerabilities": [i.to_dict() for i in bom.vdrs if i.bom_ref not in common_refs["vdrs"]]
+        "vulnerabilities": [i.to_dict() for i in bom.vdrs if i.bom_ref not in common_refs["vdrs"]],
+        "misc_data": (bom.misc_data - commons.misc_data).to_dict()
     }
-    for i in bom.components:
-        if i.bom_ref not in common_refs["components"]:
-            match i.component_type:
-                case "application":
-                    diff_summary["components"]["applications"].append(i.to_dict())  #type: ignore
-                case "framework":
-                    diff_summary["components"]["frameworks"].append(i.to_dict())  #type: ignore
-                case "library":
-                    diff_summary["components"]["libraries"].append(i.to_dict())  #type: ignore
+
+
+def get_unique_components(bom: BomDicts, common_refs: Dict):
+    components: Dict[str, List] = {"applications": [], "frameworks": [], "libraries": [], "other_components": []}
+    if bom.options.bom_profile:
+        for i in bom.components:
+            match bom.options.bom_profile:
+                case "nv":
+                    key = f"{i.name}@{i.version}"
+                case "gn":
+                    key = f"{i.group}/{i.name}"
                 case _:
-                    diff_summary["components"]["other_components"].append(i.to_dict())  #type: ignore
-    diff_summary["misc_data"] = (bom.misc_data - commons.misc_data).to_dict()
-    return diff_summary
+                    key = f"{i.group}/{i.name}@{i.version}"
+            if key not in common_refs["components"]:
+                components["other_components"].append(i.to_dict())
+        return components
+    for i in bom.components:
+        key = i.bom_ref if "components.[].bom_ref" not in bom.options.exclude else f"{i.group}/{i.name}@{i.version}"
+        if key in common_refs["components"]:
+            continue
+        match i.component_type:
+            case "application":
+                components["applications"].append(i.to_dict())  # type: ignore
+            case "framework":
+                components["frameworks"].append(i.to_dict())  # type: ignore
+            case "library":
+                components["libraries"].append(i.to_dict())  # type: ignore
+            case _:
+                components["other_components"].append(i.to_dict())  # type: ignore
+    return components
 
 
 def generate_csaf_diff(csaf: CsafDicts, commons: CsafDicts, common_refs: Dict[str, Set]) -> Dict:

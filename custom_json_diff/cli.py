@@ -129,8 +129,9 @@ def main():
     preset_type = args.preset_type.lower()
     if preset_type and preset_type not in ("bom", "csaf"):
         raise ValueError("Preconfigured type must be either bom or csaf.")
-    if args.bom_profile and args.bom_profile not in ("gn", "gnv", "nv"):
-        raise ValueError("BOM profile must be either gn, gnv, or nv.")
+    if args.bom_profile:
+        if args.bom_profile not in ("gn", "gnv", "nv"):
+            raise ValueError("BOM profile must be either gn, gnv, or nv.")
     options = Options(
         allow_new_versions=args.allow_new_versions,
         allow_new_data=args.allow_new_data,
@@ -142,7 +143,8 @@ def main():
         file_2=args.input[1],
         output=args.output,
         report_template=args.report_template,
-        include_empty=args.include_empty
+        include_empty=args.include_empty,
+        bom_profile=args.bom_profile
     )
     result, j1, j2 = compare_dicts(options)
     if preset_type == "bom":
