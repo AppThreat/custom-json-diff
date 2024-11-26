@@ -1040,7 +1040,7 @@ def import_bom_dict(
         if not value:
             elements[i] = []
     components, services, dependencies, vulnerabilities = elements
-    return other_data, Array(components), Array(services), Array(dependencies), Array(vulnerabilities)  # type: ignore
+    return other_data, Array(dedupe_components(components)), Array(services), Array(dependencies), Array(vulnerabilities)  # type: ignore
 
 
 def import_csaf(options: "Options", original_data: Dict | None = None, document: FlatDicts | None = None,
@@ -1101,3 +1101,11 @@ def parse_bom_dict(original_data: Dict, options: Options) -> Tuple[FlatDicts, Li
         if key not in {"components", "dependencies", "services", "vulnerabilities"}:
             other_data |= {key: value}
     return FlatDicts(other_data), components, services, dependencies, vulnerabilities
+
+
+def dedupe_components(components: List) -> List:
+    deduped = []
+    for component in components:
+        if component not in deduped:
+            deduped.append(component)
+    return deduped
