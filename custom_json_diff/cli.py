@@ -21,12 +21,14 @@ def build_args() -> argparse.Namespace:
         version="%(prog)s " + version("custom_json_diff")
     )
     parser.set_defaults(
-        preconfig_diff_type="",
+        preset_type="",
         allow_new_versions=False,
         report_template="",
         exclude=[],
         allow_new_data=False,
-        include=[]
+        include=[],
+        include_empty=True,
+        bom_profile=None
     )
     parser.add_argument(
         "-i",
@@ -129,8 +131,8 @@ def main():
     preset_type = args.preset_type.lower()
     if preset_type and preset_type not in ("bom", "csaf"):
         raise ValueError("Preconfigured type must be either bom or csaf.")
-    if args.bom_profile:
-        if args.bom_profile not in ("gn", "gnv", "nv"):
+    if preset_type == "bom":
+        if args.bom_profile and args.bom_profile not in ("gn", "gnv", "nv"):
             raise ValueError("BOM profile must be either gn, gnv, or nv.")
     options = Options(
         allow_new_versions=args.allow_new_versions,
