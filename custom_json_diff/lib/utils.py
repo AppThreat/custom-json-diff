@@ -223,9 +223,9 @@ def json_dump(filename: str, data: Dict, compact: bool = False, error_msg: str =
         data = sort_dict(data, sort_keys)
     try:
         if compact:
-            formatted = json.dumps(data, separators=(',', ':'), sort_keys=True)
+            formatted = json.dumps(data, separators=(',', ':'), sort_keys=True if sort_keys else False)
         else:
-            formatted = json.dumps(data, indent=2, sort_keys=True)
+            formatted = json.dumps(data, indent=2, sort_keys=True if sort_keys else False)
     except TypeError as e:
         if error_msg:
             log.warning(error_msg)
