@@ -12,8 +12,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # macOS is smoke-tested on a single Python version: it is the
+        # slowest runner, and hosted-capacity problems there produced
+        # straggler jobs that fail without running a single step.
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+        include:
+          - os: macos-latest
+            python-version: "3.13"
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
