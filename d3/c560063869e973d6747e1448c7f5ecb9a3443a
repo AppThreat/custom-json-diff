@@ -1,0 +1,19 @@
+.github/workflows/testing.yml
+  s_12c66afdba1c1b::t_d36a09bf26f2d2 15-18,20-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d3c560063869e973d6747e1448c7f5ecb9a3443a",
+  "prompts": {},
+  "sessions": {
+    "s_12c66afdba1c1b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_50fbe17e-c4e4-4823-8ac9-5873e47fa27a",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
