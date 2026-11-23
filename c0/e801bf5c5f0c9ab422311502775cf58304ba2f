@@ -1,0 +1,32 @@
+test/test_csaf_diff.py
+  s_aaee579a5278f8::t_43b66c971ea135 7
+  s_aaee579a5278f8::t_6d74b34b256ae8 35,41,47
+custom_json_diff/lib/custom_diff.py
+  s_aaee579a5278f8::t_a4eada3fe31245 6
+  s_aaee579a5278f8::t_4a6a79d6bc0e50 276-277,286-288,290-291
+test/test_custom_json_diff.py
+  s_aaee579a5278f8::t_db28084f9e15e8 8
+  s_aaee579a5278f8::t_678c671e3ad6aa 83
+  s_aaee579a5278f8::t_01bb1121f2cde6 66
+custom_json_diff/cli.py
+  s_aaee579a5278f8::t_742a769718f67b 153-154,156,158,160
+  s_aaee579a5278f8::t_cb918842114f17 5,10
+test/test_bom_diff.py
+  s_aaee579a5278f8::t_2d5291cfd722a7 328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0e801bf5c5f0c9ab422311502775cf58304ba2f",
+  "prompts": {},
+  "sessions": {
+    "s_aaee579a5278f8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_5e7ef323-4862-458f-9597-0fa3f73f8197",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}
