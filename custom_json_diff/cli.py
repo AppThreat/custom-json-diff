@@ -2,11 +2,12 @@ import argparse
 import logging
 
 from importlib.metadata import version
+from typing import cast
 
 from custom_json_diff.lib.custom_diff import (
     compare_dicts, get_diff, perform_bom_diff, perform_csaf_diff, report_results
 )
-from custom_json_diff.lib.custom_diff_classes import Options
+from custom_json_diff.lib.custom_diff_classes import BomDicts, CsafDicts, FlatDicts, Options
 
 
 logger = logging.getLogger(__name__)
@@ -149,12 +150,14 @@ def main():
         bom_profile=args.bom_profile
     )
     result, j1, j2 = compare_dicts(options)
+    # compare_dicts returns the class that options.preconfig_type selects,
+    # so each branch narrows the pair to the class its diff function expects.
     if preset_type == "bom":
-        result, result_summary = perform_bom_diff(j1, j2)
+        result, result_summary = perform_bom_diff(cast(BomDicts, j1), cast(BomDicts, j2))
     elif preset_type == "csaf":
-        result, result_summary = perform_csaf_diff(j1, j2)
+        result, result_summary = perform_csaf_diff(cast(CsafDicts, j1), cast(CsafDicts, j2))
     else:
-        result_summary = get_diff(j1, j2, options)
+        result_summary = get_diff(cast(FlatDicts, j1), cast(FlatDicts, j2), options)
     report_results(result, result_summary, options, j1, j2)
 
 

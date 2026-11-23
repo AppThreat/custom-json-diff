@@ -325,6 +325,7 @@ def results():
 
 def test_bom_diff(results, options_1):
     result, j1, j2 = compare_dicts(options_1)
+    assert isinstance(j1, BomDicts) and isinstance(j2, BomDicts)
     _, result_summary = perform_bom_diff(j1, j2)
     result_summary = unpack_misc_data(result_summary, j1.options)
     assert len(result_summary.get("diff_summary", {}).get(j1.filename, {}).get("components", {}).get("frameworks", [])) == 13

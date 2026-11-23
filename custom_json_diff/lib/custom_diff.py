@@ -3,7 +3,7 @@ import logging
 import re
 import sys
 from copy import deepcopy
-from typing import Dict, List, Set, Tuple, TYPE_CHECKING
+from typing import Dict, List, Set, Tuple, TYPE_CHECKING, cast
 
 from json_flatten import flatten  # type: ignore
 
@@ -273,7 +273,8 @@ def perform_csaf_diff(csaf_1: CsafDicts, csaf_2: CsafDicts) -> Tuple[int, Dict]:
     return status, output
 
 
-def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2: BomDicts) -> None:
+def report_results(status: int, diffs: Dict, options: Options, j1: "BomDicts | CsafDicts | FlatDicts",
+                   j2: "BomDicts | CsafDicts | FlatDicts") -> None:
     if status == 0:
         logger.info("No differences found.")
     else:
@@ -282,9 +283,12 @@ def report_results(status: int, diffs: Dict, options: Options, j1: BomDicts, j2:
     if options.preconfig_type:
         report_file = options.output.replace(".json", "") + ".html"
         if options.preconfig_type == "bom":
+            # compare_dicts returns the class that options.preconfig_type
+            # selects, so the bom report branch can safely narrow the pair.
+            bom_1, bom_2 = cast(BomDicts, j1), cast(BomDicts, j2)
             export_html_report(report_file, add_short_ref_for_report(diffs, options), options, status,
-                           calculate_pcts(diffs, j1, j2))
-            diffs = unpack_misc_data(diffs, j1.options)
+                           calculate_pcts(diffs, bom_1, bom_2))
+            diffs = unpack_misc_data(diffs, bom_1.options)
         elif options.preconfig_type == "csaf":
             export_html_report(report_file, diffs, options, status)
     if options.output:

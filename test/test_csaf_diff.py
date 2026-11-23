@@ -4,7 +4,7 @@ from copy import deepcopy
 import pytest
 
 from custom_json_diff.lib.custom_diff import compare_dicts, perform_csaf_diff
-from custom_json_diff.lib.custom_diff_classes import (CsafVulnerability, Options, BomVdr, BomVdrAffects
+from custom_json_diff.lib.custom_diff_classes import (CsafVulnerability, CsafDicts, Options, BomVdr, BomVdrAffects
 )
 from custom_json_diff.lib.utils import filter_empty, json_dump
 
@@ -32,16 +32,19 @@ def results():
 
 def test_csaf_diff(results, options_1, options_2):
     result, j1, j2 = compare_dicts(options_1)
+    assert isinstance(j1, CsafDicts) and isinstance(j2, CsafDicts)
     _, result_summary = perform_csaf_diff(j1, j2)
     results["result_13"] = result_summary
     assert result_summary == results["result_13"]
 
     result, j2, j1 = compare_dicts(options_1)
+    assert isinstance(j1, CsafDicts) and isinstance(j2, CsafDicts)
     _, result_summary = perform_csaf_diff(j2, j1)
     results["result_14"] = result_summary
     assert result_summary == results["result_14"]
 
     result, j1, j2 = compare_dicts(options_2)
+    assert isinstance(j1, CsafDicts) and isinstance(j2, CsafDicts)
     _, result_summary = perform_csaf_diff(j2, j1)
     assert filter_empty(False, result_summary["diff_summary"]) == {"test/csaf_3.json": {}, "test/csaf_4.json": {}}
 
