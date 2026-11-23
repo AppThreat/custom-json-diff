@@ -33,6 +33,7 @@ custom-json-diff = "custom_json_diff.cli:main"
 [project.optional-dependencies]
 dev = [
   "mypy",
+  "pyrefly~=1.5.0",
   "pytest",
 ]
 

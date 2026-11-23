@@ -5,7 +5,7 @@ import pytest
 from custom_json_diff.lib.custom_diff import (
     compare_dicts, filter_on_bom_profile, get_bom_status, get_diff, json_to_class
 )
-from custom_json_diff.lib.custom_diff_classes import Options
+from custom_json_diff.lib.custom_diff_classes import FlatDicts, Options
 
 
 @pytest.fixture
@@ -63,6 +63,7 @@ def test_json_to_class(java_1_flat, java_2_flat):
 def test_compare_dicts(results, options_2):
     a, b, c = compare_dicts(options_2)
     assert a == 1
+    assert isinstance(b, FlatDicts) and isinstance(c, FlatDicts)
     diffs = get_diff(b, c, options_2)
     assert diffs == results["result_6"]
     commons = b.intersection(c).to_dict(True)
@@ -79,7 +80,7 @@ def test_flat_dicts_class(java_1_flat, python_1_flat, java_2_flat, python_2_flat
 
 
 def test_get_bom_status():
-    diff_summary_1 = {}
+    diff_summary_1: dict = {}
     diff_summary_2 = {}
     assert max(get_bom_status(diff_summary_1), get_bom_status(diff_summary_2)) == 0
     diff_summary_1 = {"components": {}}
